@@ -80,6 +80,49 @@ export function injectElkLayout(
 }
 
 /**
+ * Injects the appropriate layout configuration for the selected algorithm.
+ * For elk-* algorithms: injects %%{init}%% with ELK renderer + specific algorithm.
+ * For native algorithms: just sets the graph direction.
+ */
+export function injectLayoutForAlgorithm(
+  code: string,
+  algorithm: LayoutAlgorithm,
+  direction: string
+): string {
+  const trimmed = code.trim();
+  // Only apply to flowcharts (not sequence, class, mindmap, etc.)
+  if (!trimmed.startsWith("graph ") && !trimmed.startsWith("flowchart ")) {
+    return code;
+  }
+
+  // Remove existing %%{init}%% block
+  const withoutInit = trimmed.replace(/^%%\{[\s\S]*?\}%%\s*/m, "");
+  // Set direction
+  const withDir = withoutInit.replace(
+    /^(\s*(?:graph|flowchart)\s+)(TB|TD|BT|LR|RL)/im,
+    `$1${direction}`
+  );
+
+  // ELK algorithms: inject full ELK config
+  // NOTE: We keep "htmlLabels" at the top level so Mermaid renders text alongside ELK shapes
+  const elkConfigs: Record<string, string> = {
+    "elk-layered": `{"theme":"base","htmlLabels":true,"flowchart":{"defaultRenderer":"elk","curve":"basis","useMaxWidth":true,"elk":{"algorithm":"layered","spacing":"{ edge: 20, node: 20, border: 10 }","elk.direction":"DOWN"}}}`,
+    "elk-mrtree": `{"theme":"base","htmlLabels":true,"flowchart":{"defaultRenderer":"elk","curve":"basis","useMaxWidth":true,"elk":{"algorithm":"mrtree","elk.direction":"DOWN"}}}`,
+    "elk-radial": `{"theme":"base","htmlLabels":true,"flowchart":{"defaultRenderer":"elk","curve":"basis","useMaxWidth":true,"elk":{"algorithm":"radial"}}}`,
+    "elk-force": `{"theme":"base","htmlLabels":true,"flowchart":{"defaultRenderer":"elk","curve":"basis","useMaxWidth":true,"elk":{"algorithm":"force"}}}`,
+    bus: `{"theme":"base","htmlLabels":true,"flowchart":{"defaultRenderer":"elk","curve":"basis","useMaxWidth":true,"elk":{"algorithm":"stress"}}}`,
+  };
+
+  const elkConfig = elkConfigs[algorithm];
+  if (elkConfig) {
+    return `%%{init: ${elkConfig}}%%\n${withDir}`;
+  }
+
+  // Native algorithms: just set direction, let Mermaid handle layout
+  return withDir;
+}
+
+/**
  * Maps GRAPHIQUE theme to Mermaid theme
  */
 export function themeToMermaid(theme: GraphiqueTheme): string {

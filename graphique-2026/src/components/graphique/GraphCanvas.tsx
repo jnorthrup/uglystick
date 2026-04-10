@@ -5,13 +5,23 @@
 
 import { useEffect, useRef, useCallback, useState } from "react";
 import { useGraphique } from "@/store/graphique-store";
-import { themeToMermaid, extractFlowchartStats } from "@/lib/graph/mermaid-utils";
+import { themeToMermaid, extractFlowchartStats, injectLayoutForAlgorithm } from "@/lib/graph/mermaid-utils";
 import { lint } from "@/lib/linter";
 import { ZoomIn, ZoomOut, Maximize2, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import Minimap from "./Minimap";
 
 let d3ZoomInstance: ReturnType<typeof import("d3-zoom")["zoom"]> | null = null;
 let d3Selection: unknown = null;
+
+// ── DOT WASM: lazily-loaded Graphviz instance ────────────────────────────────
+let graphvizPromise: Promise<import("@hpcc-js/wasm").Graphviz> | null = null;
+function getGraphviz() {
+  if (!graphvizPromise) {
+    graphvizPromise = import("@hpcc-js/wasm/graphviz").then((m) => m.Graphviz.load());
+  }
+  return graphvizPromise;
+}
 
 export default function GraphCanvas() {
   const { state, dispatch } = useGraphique();
@@ -43,11 +53,13 @@ export default function GraphCanvas() {
           securityLevel: "loose",
           fontFamily: "JetBrains Mono, monospace",
           fontSize: 14,
+          htmlLabels: true,
           flowchart: {
             curve: "basis",
             padding: 20,
             nodeSpacing: 50,
             rankSpacing: 60,
+            htmlLabels: true,
           },
           themeVariables:
             mermaidTheme === "dark"
@@ -69,10 +81,13 @@ export default function GraphCanvas() {
               : {},
         });
 
+        // Inject layout algorithm config (ELK for elk-* algorithms)
+        const codeWithLayout = injectLayoutForAlgorithm(state.code, state.layout, state.direction);
+
         // Generate unique id for this render
         const id = `graphique-${Date.now()}`;
 
-        const { svg } = await mermaid.render(id, state.code);
+        const { svg } = await mermaid.render(id, codeWithLayout);
 
         if (renderId !== renderIdRef.current) return; // stale render
 
@@ -107,15 +122,45 @@ export default function GraphCanvas() {
         });
       }
     } else if (state.format === "dot") {
-      // Show DOT placeholder — full Graphviz WASM would be added in production
-      svgWrapperRef.current.innerHTML = `
-        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:#6b7a8d;gap:12px;font-family:JetBrains Mono,monospace">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#00D2FF" stroke-width="1.5">
-            <circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/>
-          </svg>
-          <p style="font-size:14px;color:#00D2FF">DOT/Graphviz rendering</p>
-          <p style="font-size:12px;text-align:center;max-width:280px">Graphviz WASM integration coming soon.<br/>Switch to Mermaid for full rendering.</p>
-        </div>`;
+      try {
+        const graphviz = await getGraphviz();
+        if (renderId !== renderIdRef.current) return;
+
+        const svg = graphviz.dot(state.code, "svg");
+
+        if (renderId !== renderIdRef.current) return;
+
+        let safeSvg = svg;
+        if (typeof window !== "undefined") {
+          const DOMPurify = (await import("dompurify")).default;
+          safeSvg = DOMPurify.sanitize(svg, {
+            USE_PROFILES: { svg: true, svgFilters: true },
+          });
+        }
+
+        svgWrapperRef.current.innerHTML = safeSvg;
+
+        // Extract DOT stats: count unique node names and edges
+        const nodeMatches = state.code.match(/\b([A-Za-z_]\w*)\b/g) || [];
+        const keywords = new Set(["digraph", "graph", "subgraph", "node", "edge", "rank", "rankdir", "strict"]);
+        const uniqueNodes = new Set(nodeMatches.filter((n) => !keywords.has(n.toLowerCase())));
+        const edgeCount = (state.code.match(/->|--/g) || []).length;
+
+        dispatch({
+          type: "SET_GRAPH_STATS",
+          nodeCount: uniqueNodes.size,
+          edgeCount,
+        });
+
+        dispatch({ type: "SET_RENDER_ERROR", error: null });
+        requestAnimationFrame(() => applyZoom());
+      } catch (err) {
+        if (renderId !== renderIdRef.current) return;
+        dispatch({
+          type: "SET_RENDER_ERROR",
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
     }
 
     dispatch({ type: "SET_IS_RENDERING", rendering: false });
@@ -338,6 +383,31 @@ export default function GraphCanvas() {
           {zoom}%
         </span>
       </div>
+
+      {/* Minimap */}
+      {state.minimapOpen && (
+        <Minimap
+          svgWrapperRef={svgWrapperRef}
+          containerRef={containerRef}
+          zoomLevel={zoom}
+          onNavigate={(relX, relY) => {
+            if (!d3ZoomInstance || !containerRef.current || !svgWrapperRef.current) return;
+            const svgEl = svgWrapperRef.current.querySelector("svg");
+            if (!svgEl) return;
+            import("d3").then(({ select, zoomIdentity }) => {
+              const container = select(containerRef.current!);
+              const containerRect = containerRef.current!.getBoundingClientRect();
+              // Pan to the relative position
+              const tx = -relX * containerRect.width * 0.5 + containerRect.width * 0.3;
+              const ty = -relY * containerRect.height * 0.5 + containerRect.height * 0.3;
+              container
+                .transition()
+                .duration(300)
+                .call(d3ZoomInstance.transform, zoomIdentity.translate(tx, ty).scale(zoom / 100));
+            });
+          }}
+        />
+      )}
     </div>
   );
 }

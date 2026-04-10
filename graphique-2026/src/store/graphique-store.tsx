@@ -11,6 +11,7 @@ import React, {
   useCallback,
 } from "react";
 import type { DiagramFormat, LayoutAlgorithm, GraphiqueTheme, IDiagnostic } from "../lib/graph/types";
+import type { DockPosition } from "../lib/storage";
 import { loadAppState, saveAppState } from "../lib/storage";
 
 // ─────────────────────────────── State ───────────────────────────────────────
@@ -30,6 +31,7 @@ export interface GraphiqueState {
   propertiesOpen: boolean;
   minimapOpen: boolean;
   llmOpen: boolean;
+  panelPositions: Record<string, DockPosition>;
 
   // Selection
   selectedNodeIds: Set<string>;
@@ -64,6 +66,7 @@ type Action =
   | { type: "TOGGLE_PROPERTIES" }
   | { type: "TOGGLE_MINIMAP" }
   | { type: "TOGGLE_LLM" }
+  | { type: "SET_PANEL_POSITION"; panelId: string; position: DockPosition }
   | { type: "SET_SELECTED_NODES"; ids: Set<string> }
   | { type: "SET_DIAGNOSTICS"; diagnostics: IDiagnostic[] }
   | { type: "SET_RENDER_ERROR"; error: string | null }
@@ -98,6 +101,14 @@ function reducer(state: GraphiqueState, action: Action): GraphiqueState {
       return { ...state, minimapOpen: !state.minimapOpen };
     case "TOGGLE_LLM":
       return { ...state, llmOpen: !state.llmOpen };
+    case "SET_PANEL_POSITION":
+      return {
+        ...state,
+        panelPositions: {
+          ...state.panelPositions,
+          [action.panelId]: action.position,
+        },
+      };
     case "SET_SELECTED_NODES":
       return { ...state, selectedNodeIds: action.ids };
     case "SET_DIAGNOSTICS":
@@ -158,6 +169,11 @@ function getInitialState(): GraphiqueState {
     propertiesOpen: true,
     minimapOpen: true,
     llmOpen: false,
+    panelPositions: {
+      editor: "bottom",
+      properties: "right",
+      llm: "right",
+    },
     selectedNodeIds: new Set(),
     diagnostics: [],
     renderError: null,
@@ -202,6 +218,7 @@ export function GraphiqueProvider({ children }: { children: React.ReactNode }) {
         propertiesOpen: saved.propertiesPanelOpen,
         minimapOpen: saved.minimapOpen,
         llmOpen: saved.llmPanelOpen,
+        panelPositions: saved.panelPositions,
       },
     });
   }, []);
@@ -219,6 +236,7 @@ export function GraphiqueProvider({ children }: { children: React.ReactNode }) {
       propertiesPanelOpen: state.propertiesOpen,
       minimapOpen: state.minimapOpen,
       llmPanelOpen: state.llmOpen,
+      panelPositions: state.panelPositions,
     });
   }, [
     state.code,
@@ -231,6 +249,7 @@ export function GraphiqueProvider({ children }: { children: React.ReactNode }) {
     state.propertiesOpen,
     state.minimapOpen,
     state.llmOpen,
+    state.panelPositions,
   ]);
 
   const setCode = useCallback((code: string) => dispatch({ type: "SET_CODE", code }), []);

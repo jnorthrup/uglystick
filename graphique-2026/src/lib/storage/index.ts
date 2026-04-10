@@ -14,6 +14,8 @@ export interface SavedDiagram {
   updatedAt: string;
 }
 
+export type DockPosition = "right" | "bottom" | "left";
+
 export interface AppState {
   currentCode: string;
   currentFormat: DiagramFormat;
@@ -25,6 +27,7 @@ export interface AppState {
   propertiesPanelOpen: boolean;
   minimapOpen: boolean;
   llmPanelOpen: boolean;
+  panelPositions: Record<string, DockPosition>;
 }
 
 const STATE_KEY = "graphique_app_state";
@@ -64,6 +67,11 @@ export function loadAppState(): AppState {
     propertiesPanelOpen: true,
     minimapOpen: true,
     llmPanelOpen: false,
+    panelPositions: {
+      editor: "bottom",
+      properties: "right",
+      llm: "right",
+    },
   };
 
   if (typeof window === "undefined") return defaults;
