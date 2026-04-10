@@ -5,7 +5,7 @@
 
 import { useEffect, useRef, useCallback, useState } from "react";
 import { useGraphique } from "@/store/graphique-store";
-import { themeToMermaid, extractFlowchartStats } from "@/lib/graph/mermaid-utils";
+import { themeToMermaid } from "@/lib/graph/mermaid-utils";
 import { computeLayout, renderSVG } from "@/lib/graph/elk-engine";
 import { lint } from "@/lib/linter";
 import { ZoomIn, ZoomOut, Maximize2, RotateCcw } from "lucide-react";
@@ -44,18 +44,16 @@ export default function GraphCanvas() {
 
     if (state.format === "mermaid") {
       try {
-        // Use D3 force layout for all rendering
-        const layout = await computeLayout(state.code, state.layout, state.direction);
+        const layout = computeLayout(state.code, state.layout, state.direction);
         if (renderId !== renderIdRef.current) return;
 
         const safeSvg = renderSVG(layout, state.theme);
         svgWrapperRef.current.innerHTML = safeSvg;
 
-        const stats = extractFlowchartStats(state.code);
         dispatch({
           type: "SET_GRAPH_STATS",
-          nodeCount: layout.nodes.length || stats.nodeCount,
-          edgeCount: layout.edges.length || stats.edgeCount,
+          nodeCount: layout.nodes.length,
+          edgeCount: layout.edges.length,
         });
 
         dispatch({ type: "SET_RENDER_ERROR", error: null });

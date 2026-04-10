@@ -1,7 +1,6 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // GRAPHIQUE 2026 — D3 Force Layout Engine
-// Pure d3-force simulation with direct SVG rendering.
-// No ELK, no Mermaid layout — we compute positions and draw SVG ourselves.
+// Pure d3-force with proper edge routing, scaling, and clean SVG output.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import * as d3 from "d3";
@@ -9,9 +8,7 @@ import * as d3 from "d3";
 interface SimNode extends d3.SimulationNodeDatum {
   id: string;
   label: string;
-  layer?: number;
-  angle?: number;
-  radius?: number;
+  layer: number;
 }
 
 interface SimLink extends d3.SimulationLinkDatum<SimNode> {
@@ -21,12 +18,11 @@ interface SimLink extends d3.SimulationLinkDatum<SimNode> {
   label?: string;
 }
 
-interface GraphData {
-  nodes: { id: string; label: string }[];
-  edges: { id: string; source: string; target: string; label?: string }[];
-}
+const NODE_W = 140;
+const NODE_H = 48;
+const PADDING = 40;
 
-function parseGraph(code: string): GraphData {
+function parseGraph(code: string): { nodes: { id: string; label: string }[]; edges: { id: string; source: string; target: string; label?: string }[] } {
   const lines = code
     .split("\n")
     .map((l) => l.trim())
@@ -69,259 +65,288 @@ function parseGraph(code: string): GraphData {
   };
 }
 
-function configureSimulation(
-  nodes: SimNode[],
-  links: SimLink[],
-  algorithm: string,
-  direction: string
-): d3.Simulation<SimNode, SimLink> {
-  const width = 1200;
-  const height = 800;
-
-  // Assign initial positions based on layout type
-  nodes.forEach((n, i) => {
-    n.x = width / 2;
-    n.y = height / 2;
-  });
-
-  const sim = d3
-    .forceSimulation<SimNode>(nodes)
-    .force("charge", d3.forceManyBody().strength(-400))
-    .force("center", d3.forceCenter(width / 2, height / 2))
-    .force("collision", d3.forceCollide().radius(80))
-    .stop();
-
-  switch (algorithm) {
-    case "hierarchical":
-    case "elk-layered": {
-      // Assign layers by topological sort
-      const layers = computeLayers(nodes, links);
-      sim
-        .force("link", d3.forceLink<SimNode, SimLink>(links).id((d) => d.id).strength(0.8).distance(100))
-        .force("y", d3.forceY((d) => (d.layer ?? 0) * 100 + 80).strength(0.9))
-        .force("x", d3.forceX(width / 2).strength(0.1));
-      break;
-    }
-    case "tree":
-    case "elk-mrtree": {
-      const layers = computeLayers(nodes, links);
-      sim
-        .force("link", d3.forceLink<SimNode, SimLink>(links).id((d) => d.id).strength(0.9).distance(80))
-        .force("y", d3.forceY((d) => (d.layer ?? 0) * 100 + 80).strength(1.0))
-        .force("x", d3.forceX(width / 2).strength(0.3))
-        .force("charge", d3.forceManyBody().strength(-600));
-      break;
-    }
-    case "force":
-    case "elk-force": {
-      sim
-        .force("link", d3.forceLink<SimNode, SimLink>(links).id((d) => d.id).strength(0.5).distance(120))
-        .force("charge", d3.forceManyBody().strength(-500));
-      break;
-    }
-    case "circular":
-    case "elk-radial": {
-      const radius = Math.min(width, height) * 0.35;
-      nodes.forEach((n, i) => {
-        const angle = (i / nodes.length) * 2 * Math.PI;
-        n.x = width / 2 + Math.cos(angle) * radius;
-        n.y = height / 2 + Math.sin(angle) * radius;
-      });
-      sim
-        .force("link", d3.forceLink<SimNode, SimLink>(links).id((d) => d.id).strength(0.3).distance(150))
-        .force("charge", d3.forceManyBody().strength(-300))
-        .force("center", d3.forceCenter(width / 2, height / 2).strength(0.05));
-      break;
-    }
-    case "orthogonal": {
-      const layers = computeLayers(nodes, links);
-      sim
-        .force("link", d3.forceLink<SimNode, SimLink>(links).id((d) => d.id).strength(0.7).distance(100))
-        .force("y", d3.forceY((d) => (d.layer ?? 0) * 100 + 80).strength(0.9))
-        .force("x", d3.forceX(width / 2).strength(0.15))
-        .force("charge", d3.forceManyBody().strength(-350));
-      break;
-    }
-    case "bus": {
-      // Bus: nodes arranged in a line with a central trunk
-      sim
-        .force("link", d3.forceLink<SimNode, SimLink>(links).id((d) => d.id).strength(0.3).distance(60))
-        .force("x", d3.forceX((d, i) => {
-          const side = i % 2 === 0 ? width * 0.3 : width * 0.7;
-          return side;
-        }).strength(0.8))
-        .force("y", d3.forceY((d, i) => i * 100 + 80).strength(0.9))
-        .force("charge", d3.forceManyBody().strength(-200));
-      break;
-    }
-    default: {
-      sim.force("link", d3.forceLink<SimNode, SimLink>(links).id((d) => d.id).strength(0.5).distance(100));
-    }
-  }
-
-  return sim;
-}
-
-function computeLayers(nodes: SimNode[], links: SimLink[]): Map<string, number> {
+function computeLayers(nodes: { id: string }[], links: SimLink[]): Map<string, number> {
   const adj = new Map<string, string[]>();
-  const inDegree = new Map<string, number>();
-  const nodeIds = new Set(nodes.map((n) => n.id));
+  const inDeg = new Map<string, number>();
+  const ids = new Set(nodes.map((n) => n.id));
 
-  nodes.forEach((n) => {
-    adj.set(n.id, []);
-    inDegree.set(n.id, 0);
-  });
+  nodes.forEach((n) => { adj.set(n.id, []); inDeg.set(n.id, 0); });
 
-  for (const link of links) {
-    if (nodeIds.has(link.source) && nodeIds.has(link.target)) {
-      adj.get(link.source)?.push(link.target);
-      inDegree.set(link.target, (inDegree.get(link.target) || 0) + 1);
+  for (const l of links) {
+    if (ids.has(l.source) && ids.has(l.target)) {
+      adj.get(l.source)!.push(l.target);
+      inDeg.set(l.target, (inDeg.get(l.target) || 0) + 1);
     }
   }
 
-  // BFS topological sort
   const queue: string[] = [];
   const layers = new Map<string, number>();
 
   nodes.forEach((n) => {
-    if ((inDegree.get(n.id) || 0) === 0) {
+    if ((inDeg.get(n.id) || 0) === 0) {
       queue.push(n.id);
       layers.set(n.id, 0);
     }
   });
 
   while (queue.length > 0) {
-    const current = queue.shift()!;
-    const currentLayer = layers.get(current) || 0;
-    for (const neighbor of adj.get(current) || []) {
-      const newLayer = currentLayer + 1;
-      if (!layers.has(neighbor) || layers.get(neighbor)! < newLayer) {
-        layers.set(neighbor, newLayer);
-      }
-      inDegree.set(neighbor, (inDegree.get(neighbor) || 0) - 1);
-      if ((inDegree.get(neighbor) || 0) === 0) {
-        queue.push(neighbor);
-      }
+    const cur = queue.shift()!;
+    const layer = layers.get(cur)!;
+    for (const nb of adj.get(cur) || []) {
+      const nl = layer + 1;
+      if (!layers.has(nb) || layers.get(nb)! < nl) layers.set(nb, nl);
+      inDeg.set(nb, inDeg.get(nb)! - 1);
+      if (inDeg.get(nb) === 0) queue.push(nb);
     }
   }
 
-  // Assign unvisited nodes to layer 0
-  nodes.forEach((n) => {
-    if (!layers.has(n.id)) layers.set(n.id, 0);
-  });
-
+  nodes.forEach((n) => { if (!layers.has(n.id)) layers.set(n.id, 0); });
   return layers;
 }
 
-export interface LayoutResult {
-  nodes: { id: string; label: string; x: number; y: number; w: number; h: number }[];
-  edges: { id: string; source: string; target: string; label?: string; sx: number; sy: number; tx: number; ty: number }[];
-  width: number;
-  height: number;
+function edgeIntersect(
+  cx: number, cy: number,
+  tx: number, ty: number,
+  w: number, h: number
+): { x: number; y: number } {
+  // Find where line from (cx,cy) to (tx,ty) intersects the rectangle centered at (tx,ty)
+  const dx = tx - cx;
+  const dy = ty - cy;
+  if (dx === 0 && dy === 0) return { x: tx, y: ty };
+
+  const hw = w / 2;
+  const hh = h / 2;
+
+  let t = Infinity;
+  if (dx !== 0) {
+    const t1 = (hw) / Math.abs(dx);
+    const t2 = (-hw) / Math.abs(dx);
+    t = Math.min(t > 0 ? t : Infinity, t1 > 0 ? t1 : Infinity, t2 > 0 ? t2 : Infinity);
+  }
+  if (dy !== 0) {
+    const t1 = (hh) / Math.abs(dy);
+    const t2 = (-hh) / Math.abs(dy);
+    t = Math.min(t, t1 > 0 ? t1 : Infinity, t2 > 0 ? t2 : Infinity);
+  }
+  if (t === Infinity) return { x: tx, y: ty };
+
+  return { x: cx + dx * t, y: cy + dy * t };
 }
 
-export async function computeLayout(
+export interface LayoutResult {
+  nodes: { id: string; label: string; x: number; y: number }[];
+  edges: { sourceX: number; sourceY: number; targetX: number; targetY: number; label?: string }[];
+  viewBox: { x: number; y: number; w: number; h: number };
+}
+
+export function computeLayout(
   code: string,
   algorithm: string,
   direction: string
-): Promise<LayoutResult> {
+): LayoutResult {
   const { nodes: nodeList, edges: edgeList } = parseGraph(code);
-  if (nodeList.length === 0) return { nodes: [], edges: [], width: 0, height: 0 };
+  if (nodeList.length === 0) return { nodes: [], edges: [], viewBox: { x: 0, y: 0, w: 400, h: 300 } };
 
-  const simNodes: SimNode[] = nodeList.map((n) => ({ ...n }));
+  const isVertical = direction === "TB" || direction === "BT";
+  const simNodes: SimNode[] = nodeList.map((n) => ({ id: n.id, label: n.label, layer: 0 }));
   const simLinks: SimLink[] = edgeList.map((e) => ({ ...e }));
 
-  const sim = configureSimulation(simNodes, simLinks, algorithm, direction);
+  const layers = computeLayers(nodeList, simLinks);
+  simNodes.forEach((n) => { n.layer = layers.get(n.id) ?? 0; });
 
-  // Run simulation synchronously
-  sim.tick(300);
+  const layerCount = Math.max(...simNodes.map((n) => n.layer), 0) + 1;
+  const maxInLayer = Math.max(...Array.from(layers.values()).reduce((acc: number[], l) => {
+    acc[l] = (acc[l] || 0) + 1;
+    return acc;
+  }, []), 1);
 
-  const nodeW = 150;
-  const nodeH = 60;
+  // Canvas size based on graph dimensions
+  const canvasW = Math.max(maxInLayer * (NODE_W + 50) + PADDING * 2, 500);
+  const canvasH = Math.max(layerCount * (NODE_H + 80) + PADDING * 2, 300);
 
-  const resultNodes = simNodes.map((n) => ({
-    id: n.id,
-    label: n.label,
-    x: n.x ?? 0,
-    y: n.y ?? 0,
-    w: nodeW,
-    h: nodeH,
-  }));
+  const sim = d3.forceSimulation<SimNode>(simNodes)
+    .alphaDecay(0.02)
+    .velocityDecay(0.4)
+    .force("charge", d3.forceManyBody().strength(-300))
+    .force("collision", d3.forceCollide().radius(Math.max(NODE_W, NODE_H) / 2 + 10))
+    .stop();
 
-  const resultEdges = edgeList.map((e, i) => {
-    const src = simNodes.find((n) => n.id === e.source);
-    const tgt = simNodes.find((n) => n.id === e.target);
-    return {
-      id: e.id,
-      source: e.source,
-      target: e.target,
-      label: e.label,
-      sx: src?.x ?? 0,
-      sy: src?.y ?? 0,
-      tx: tgt?.x ?? 0,
-      ty: tgt?.y ?? 0,
-    };
-  });
+  // Per-algorithm force configs
+  switch (algorithm) {
+    case "hierarchical":
+    case "elk-layered":
+      sim.force("layer", isVertical
+        ? d3.forceY((d) => d.layer * (NODE_H + 80) + PADDING + NODE_H / 2).strength(1.0)
+        : d3.forceX((d) => d.layer * (NODE_W + 80) + PADDING + NODE_W / 2).strength(1.0)
+      );
+      sim.force("cross", isVertical
+        ? d3.forceX(canvasW / 2).strength(0.05)
+        : d3.forceY(canvasH / 2).strength(0.05)
+      );
+      sim.force("link", d3.forceLink(simLinks).id((d) => d.id).distance(60).strength(0.6));
+      break;
 
-  let maxW = 0;
-  let maxH = 0;
-  for (const n of resultNodes) {
-    maxW = Math.max(maxW, n.x + n.w);
-    maxH = Math.max(maxH, n.y + n.h);
+    case "tree":
+    case "elk-mrtree":
+      sim.force("layer", isVertical
+        ? d3.forceY((d) => d.layer * (NODE_H + 80) + PADDING + NODE_H / 2).strength(1.0)
+        : d3.forceX((d) => d.layer * (NODE_W + 80) + PADDING + NODE_W / 2).strength(1.0)
+      );
+      sim.force("spread", isVertical
+        ? d3.forceX((d) => {
+            const siblings = simNodes.filter((n) => n.layer === d.layer);
+            const idx = siblings.indexOf(d);
+            return PADDING + NODE_W / 2 + idx * (NODE_W + 50);
+          }).strength(0.8)
+        : d3.forceY((d) => {
+            const siblings = simNodes.filter((n) => n.layer === d.layer);
+            const idx = siblings.indexOf(d);
+            return PADDING + NODE_H / 2 + idx * (NODE_H + 40);
+          }).strength(0.8)
+      );
+      sim.force("link", d3.forceLink(simLinks).id((d) => d.id).distance(60).strength(0.7));
+      break;
+
+    case "force":
+    case "elk-force":
+      sim.force("link", d3.forceLink(simLinks).id((d) => d.id).distance(120).strength(0.4));
+      sim.force("charge", d3.forceManyBody().strength(-500));
+      sim.force("center", d3.forceCenter(canvasW / 2, canvasH / 2));
+      break;
+
+    case "circular":
+    case "elk-radial": {
+      const radius = Math.min(canvasW, canvasH) * 0.35;
+      simNodes.forEach((n, i) => {
+        const a = (i / simNodes.length) * 2 * Math.PI - Math.PI / 2;
+        n.x = canvasW / 2 + Math.cos(a) * radius;
+        n.y = canvasH / 2 + Math.sin(a) * radius;
+      });
+      sim.force("link", d3.forceLink(simLinks).id((d) => d.id).distance(100).strength(0.2));
+      sim.force("charge", d3.forceManyBody().strength(-200));
+      sim.force("center", d3.forceCenter(canvasW / 2, canvasH / 2).strength(0.08));
+      break;
+    }
+
+    case "orthogonal":
+      sim.force("layer", isVertical
+        ? d3.forceY((d) => d.layer * (NODE_H + 80) + PADDING + NODE_H / 2).strength(1.0)
+        : d3.forceX((d) => d.layer * (NODE_W + 80) + PADDING + NODE_W / 2).strength(1.0)
+      );
+      sim.force("snap", isVertical
+        ? d3.forceX((d) => {
+            const siblings = simNodes.filter((n) => n.layer === d.layer);
+            const idx = siblings.indexOf(d);
+            return PADDING + NODE_W / 2 + idx * (NODE_W + 50);
+          }).strength(0.5)
+        : d3.forceY((d) => {
+            const siblings = simNodes.filter((n) => n.layer === d.layer);
+            const idx = siblings.indexOf(d);
+            return PADDING + NODE_H / 2 + idx * (NODE_H + 40);
+          }).strength(0.5)
+      );
+      sim.force("link", d3.forceLink(simLinks).id((d) => d.id).distance(60).strength(0.6));
+      break;
+
+    case "bus": {
+      const busPos = isVertical ? canvasW / 2 : canvasH / 2;
+      sim.force("layer", isVertical
+        ? d3.forceY((d, i) => i * (NODE_H + 60) + PADDING + NODE_H / 2).strength(1.0)
+        : d3.forceX((d, i) => i * (NODE_W + 60) + PADDING + NODE_W / 2).strength(1.0)
+      );
+      sim.force("bus", isVertical
+        ? d3.forceX((d, i) => i % 2 === 0 ? busPos - NODE_W / 2 - 30 : busPos + NODE_W / 2 + 30).strength(0.9)
+        : d3.forceY((d, i) => i % 2 === 0 ? busPos - NODE_H / 2 - 30 : busPos + NODE_H / 2 + 30).strength(0.9)
+      );
+      sim.force("link", d3.forceLink(simLinks).id((d) => d.id).distance(40).strength(0.3));
+      sim.force("charge", d3.forceManyBody().strength(-100));
+      break;
+    }
+
+    default:
+      sim.force("link", d3.forceLink(simLinks).id((d) => d.id).distance(80).strength(0.5));
+      sim.force("center", d3.forceCenter(canvasW / 2, canvasH / 2));
   }
 
-  return { nodes: resultNodes, edges: resultEdges, width: maxW + 40, height: maxH + 40 };
+  sim.tick(300);
+
+  // Build result with proper edge connections (edge-to-edge, not center-to-center)
+  const nodes = simNodes.map((n) => ({
+    id: n.id,
+    label: n.label,
+    x: n.x ?? canvasW / 2,
+    y: n.y ?? canvasH / 2,
+  }));
+
+  const edges = edgeList.map((e) => {
+    const src = nodes.find((n) => n.id === e.source)!;
+    const tgt = nodes.find((n) => n.id === e.target)!;
+    if (!src || !tgt) return { sourceX: 0, sourceY: 0, targetX: 0, targetY: 0, label: e.label };
+
+    const from = edgeIntersect(src.x, src.y, tgt.x, tgt.y, NODE_W, NODE_H);
+    const to = edgeIntersect(tgt.x, tgt.y, src.x, src.y, NODE_W, NODE_H);
+    return { sourceX: from.x, sourceY: from.y, targetX: to.x, targetY: to.y, label: e.label };
+  });
+
+  // Compute viewBox with padding
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const n of nodes) {
+    minX = Math.min(minX, n.x - NODE_W / 2);
+    minY = Math.min(minY, n.y - NODE_H / 2);
+    maxX = Math.max(maxX, n.x + NODE_W / 2);
+    maxY = Math.max(maxY, n.y + NODE_H / 2);
+  }
+
+  return {
+    nodes,
+    edges,
+    viewBox: {
+      x: minX - PADDING,
+      y: minY - PADDING,
+      w: maxX - minX + PADDING * 2,
+      h: maxY - minY + PADDING * 2,
+    },
+  };
 }
 
-function roundedRect(x: number, y: number, w: number, h: number): string {
-  const r = 8;
-  return `M${x + r},${y} L${x + w - r},${y} Q${x + w},${y} ${x + w},${y + r} L${x + w},${y + h - r} Q${x + w},${y + h} ${x + w - r},${y + h} L${x + r},${y + h} Q${x},${y + h} ${x},${y + h - r} L${x},${y + r} Q${x},${y} ${x + r},${y} Z`;
-}
-
-export function renderSVG(graph: LayoutResult, theme: string = "dark"): string {
-  const padding = 30;
-  const w = graph.width + padding * 2;
-  const h = graph.height + padding * 2;
+export function renderSVG(result: LayoutResult, theme: string = "dark"): string {
+  const { viewBox, nodes, edges } = result;
+  const vb = `${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`;
 
   const isDark = theme === "dark" || theme === "observatory" || theme === "dracula" || theme === "nord";
-  const nodeFill = isDark ? "#1e3a5f" : "#f0f4f8";
-  const nodeStroke = isDark ? "#00D2FF" : "#3b82f6";
-  const edgeColor = isDark ? "#00D2FF" : "#3b82f6";
-  const textColor = isDark ? "#cdd6f4" : "#1e293b";
-  const labelBg = isDark ? "#1a2744" : "#e2e8f0";
+  const nodeFill = isDark ? "#1e293b" : "#ffffff";
+  const nodeStroke = isDark ? "#38bdf8" : "#3b82f6";
+  const edgeColor = isDark ? "#0ea5e9" : "#64748b";
+  const textColor = isDark ? "#e2e8f0" : "#1e293b";
+  const labelBg = isDark ? "#0f172a" : "#f1f5f9";
+  const bgFill = isDark ? "#0d1117" : "#fafbfc";
 
-  let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" font-family="JetBrains Mono, monospace">`;
+  let svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vb}" width="100%" height="100%" font-family="'JetBrains Mono', 'Fira Code', monospace" style="background:${bgFill}">`;
 
   svg += `<defs>
-    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+    <marker id="ah" viewBox="0 0 10 7" refX="9" refY="3.5" markerWidth="6" markerHeight="5" orient="auto-start-reverse">
       <polygon points="0 0, 10 3.5, 0 7" fill="${edgeColor}" />
     </marker>
   </defs>`;
 
-  // Edges first (so they render behind nodes)
-  for (const edge of graph.edges) {
-    const sx = edge.sx + padding + 75;
-    const sy = edge.sy + padding + 30;
-    const tx = edge.tx + padding + 75;
-    const ty = edge.ty + padding + 30;
-
-    svg += `<line x1="${sx}" y1="${sy}" x2="${tx}" y2="${ty}" stroke="${edgeColor}" stroke-width="2" marker-end="url(#arrowhead)" />`;
-
-    if (edge.label) {
-      const mx = (sx + tx) / 2;
-      const my = (sy + ty) / 2;
-      svg += `<rect x="${mx - 20}" y="${my - 10}" width="40" height="16" fill="${labelBg}" rx="3" />`;
-      svg += `<text x="${mx}" y="${my + 3}" fill="${textColor}" font-size="10" text-anchor="middle">${edge.label}</text>`;
+  // Edges
+  for (const e of edges) {
+    svg += `<line x1="${e.sourceX}" y1="${e.sourceY}" x2="${e.targetX}" y2="${e.targetY}" stroke="${edgeColor}" stroke-width="1.5" marker-end="url(#ah)" />`;
+    if (e.label) {
+      const mx = (e.sourceX + e.targetX) / 2;
+      const my = (e.sourceY + e.targetY) / 2;
+      svg += `<rect x="${mx - 18}" y="${my - 8}" width="36" height="14" fill="${labelBg}" rx="3" opacity="0.9" />`;
+      svg += `<text x="${mx}" y="${my + 2}" fill="${textColor}" font-size="9" text-anchor="middle">${e.label}</text>`;
     }
   }
 
   // Nodes
-  for (const node of graph.nodes) {
-    const nx = node.x + padding;
-    const ny = node.y + padding;
-
-    svg += `<path d="${roundedRect(nx, ny, node.w, node.h)}" fill="${nodeFill}" stroke="${nodeStroke}" stroke-width="2" />`;
-    svg += `<text x="${nx + node.w / 2}" y="${ny + node.h / 2 + 4}" fill="${textColor}" font-size="12" text-anchor="middle" pointer-events="none">${node.label}</text>`;
+  const r = 6;
+  for (const n of nodes) {
+    const x = n.x - NODE_W / 2;
+    const y = n.y - NODE_H / 2;
+    svg += `<rect x="${x}" y="${y}" width="${NODE_W}" height="${NODE_H}" rx="${r}" fill="${nodeFill}" stroke="${nodeStroke}" stroke-width="1.5" />`;
+    svg += `<text x="${n.x}" y="${n.y + 1}" fill="${textColor}" font-size="11" text-anchor="middle" dominant-baseline="middle" pointer-events="none">${n.label}</text>`;
   }
 
   svg += "</svg>";
