@@ -458,30 +458,72 @@ function extractDAGLayout(
   dag: any,
   nodeMap: Map<string, string>,
   edgeList: { source: string; target: string; label?: string }[],
-  isVertical: boolean
+  _isVertical: boolean
 ): LayoutResult {
-  const nodes: LayoutNode[] = [];
+  // Collect node positions from DAG (use ID-based lookup)
+  const nodePositions = new Map<string, { x: number; y: number }>();
   for (const node of dag.descendants()) {
     const id = node.data.id || node.data.label;
-    const label = node.data.label || node.data.id;
-    nodes.push({ id, label, x: node.x!, y: node.y! });
+    if (id && node.x !== undefined && node.y !== undefined) {
+      nodePositions.set(id, { x: node.x, y: node.y });
+    }
   }
 
+  const nodes: LayoutNode[] = [];
+  for (const [id, pos] of nodePositions) {
+    nodes.push({ id, label: nodeMap.get(id) || id, x: pos.x, y: pos.y });
+  }
+
+  // Build edges from original edge list using ID lookup (preserves correct direction)
   const edges: LayoutEdge[] = [];
-  for (const link of dag.links()) {
-    const src = link.source;
-    const tgt = link.target;
+  for (const e of edgeList) {
+    const src = nodePositions.get(e.source);
+    const tgt = nodePositions.get(e.target);
     if (!src || !tgt) continue;
     edges.push({
-      points: [
-        { x: src.x!, y: src.y! },
-        { x: tgt.x!, y: tgt.y! },
-      ],
-      label: (link.data as { label?: string })?.label,
+      points: [{ x: src.x, y: src.y }, { x: tgt.x, y: tgt.y }],
+      label: e.label,
     });
   }
 
-  return buildResultFromNodes(nodes, edges);
+  // Normalize positions: translate to origin and scale to fit reasonable viewport
+  if (nodes.length === 0) return { nodes: [], edges: [], width: 400, height: 300 };
+
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const n of nodes) {
+    minX = Math.min(minX, n.x);
+    minY = Math.min(minY, n.y);
+    maxX = Math.max(maxX, n.x);
+    maxY = Math.max(maxY, n.y);
+  }
+
+  const rawW = maxX - minX || 1;
+  const rawH = maxY - minY || 1;
+
+  // Target reasonable viewport size
+  const targetW = Math.max(rawW, 600);
+  const targetH = Math.max(rawH, 400);
+
+  // Shift all nodes so minX,minY = 0
+  for (const n of nodes) {
+    n.x -= minX;
+    n.y -= minY;
+  }
+
+  // Shift edges too
+  for (const e of edges) {
+    for (const p of e.points) {
+      p.x -= minX;
+      p.y -= minY;
+    }
+  }
+
+  return {
+    nodes,
+    edges,
+    width: targetW + PADDING * 2,
+    height: targetH + PADDING * 2,
+  };
 }
 
 function buildResult(
