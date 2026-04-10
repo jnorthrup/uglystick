@@ -104,13 +104,14 @@ export function injectLayoutForAlgorithm(
   );
 
   // ELK algorithms: inject full ELK config
-  // NOTE: We keep "htmlLabels" at the top level so Mermaid renders text alongside ELK shapes
+  // NOTE: ELK uses SVG text elements (not htmlLabels), so we set htmlLabels:false
+  // and ensure theme has proper text color for visibility
   const elkConfigs: Record<string, string> = {
-    "elk-layered": `{"theme":"base","htmlLabels":true,"flowchart":{"defaultRenderer":"elk","curve":"basis","useMaxWidth":true,"elk":{"algorithm":"layered","spacing":"{ edge: 20, node: 20, border: 10 }","elk.direction":"DOWN"}}}`,
-    "elk-mrtree": `{"theme":"base","htmlLabels":true,"flowchart":{"defaultRenderer":"elk","curve":"basis","useMaxWidth":true,"elk":{"algorithm":"mrtree","elk.direction":"DOWN"}}}`,
-    "elk-radial": `{"theme":"base","htmlLabels":true,"flowchart":{"defaultRenderer":"elk","curve":"basis","useMaxWidth":true,"elk":{"algorithm":"radial"}}}`,
-    "elk-force": `{"theme":"base","htmlLabels":true,"flowchart":{"defaultRenderer":"elk","curve":"basis","useMaxWidth":true,"elk":{"algorithm":"force"}}}`,
-    bus: `{"theme":"base","htmlLabels":true,"flowchart":{"defaultRenderer":"elk","curve":"basis","useMaxWidth":true,"elk":{"algorithm":"stress"}}}`,
+    "elk-layered": `{"theme":"base","flowchart":{"defaultRenderer":"elk","curve":"basis","useMaxWidth":true,"elk":{"algorithm":"layered","elk.direction":"DOWN","spacing":"{ edge: 20, node: 20, border: 10 }"}}}`,
+    "elk-mrtree": `{"theme":"base","flowchart":{"defaultRenderer":"elk","curve":"basis","useMaxWidth":true,"elk":{"algorithm":"mrtree","elk.direction":"DOWN"}}}`,
+    "elk-radial": `{"theme":"base","flowchart":{"defaultRenderer":"elk","curve":"basis","useMaxWidth":true,"elk":{"algorithm":"radial"}}}`,
+    "elk-force": `{"theme":"base","flowchart":{"defaultRenderer":"elk","curve":"basis","useMaxWidth":true,"elk":{"algorithm":"force"}}}`,
+    bus: `{"theme":"base","flowchart":{"defaultRenderer":"elk","curve":"basis","useMaxWidth":true,"elk":{"algorithm":"stress"}}}`,
   };
 
   const elkConfig = elkConfigs[algorithm];

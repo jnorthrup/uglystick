@@ -1,6 +1,6 @@
 "use client";
 // ─────────────────────────────────────────────────────────────────────────────
-// GRAPHIQUE 2026 — Minimap (overview thumbnail with viewport indicator)
+// GRAPHIQUE 2026 — Minimap (canvas-based, lightweight overview)
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useEffect, useRef, useCallback, useState } from "react";
@@ -22,94 +22,110 @@ export default function Minimap({
   width = 200,
   height = 130,
 }: MinimapProps) {
-  const minimapRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [svgVersion, setSvgVersion] = useState(0);
+  const renderCountRef = useRef(0);
 
-  // Clone SVG from main canvas into minimap
+  // Watch for SVG DOM changes (content replaced by Mermaid/DOT)
   useEffect(() => {
-    if (!minimapRef.current || !svgWrapperRef.current) return;
+    // Trigger initial render check
+    setSvgVersion((v) => v + 1);
 
-    const svg = svgWrapperRef.current.querySelector("svg");
-    if (!svg) return;
+    const observer = new MutationObserver(() => {
+      setSvgVersion((v) => v + 1);
+    });
 
-    const cloned = svg.cloneNode(true) as SVGElement;
+    // Observe the wrapper for child list changes (SVG being replaced)
+    if (svgWrapperRef.current) {
+      observer.observe(svgWrapperRef.current, { childList: true, subtree: true });
+    }
 
-    // Strip interactive attributes and set fixed size for minimap
-    cloned.removeAttribute("id");
-    cloned.removeAttribute("class");
-    cloned.style.width = `${width}px`;
-    cloned.style.height = `${height}px`;
-    cloned.style.pointerEvents = "none";
-    cloned.style.transform = "none";
+    return () => observer.disconnect();
+  }, [svgWrapperRef]);
 
-    // Make it semi-transparent for overview feel
-    cloned.style.opacity = "0.7";
-
-    minimapRef.current.innerHTML = "";
-    minimapRef.current.appendChild(cloned);
-  }, [svgWrapperRef, width, height]);
-
-  // Compute viewport indicator position
-  const computeViewportRect = useCallback(() => {
-    if (!containerRef.current) return null;
-
-    const containerRect = containerRef.current.getBoundingClientRect();
+  // Render minimap whenever SVG changes
+  useEffect(() => {
+    const canvas = canvasRef.current;
     const svgEl = svgWrapperRef.current?.querySelector("svg");
-    if (!svgEl) return null;
+    if (!canvas || !svgEl) return;
+
+    const renderId = ++renderCountRef.current;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
 
     const svgRect = svgEl.getBoundingClientRect();
+    if (!svgRect.width || !svgRect.height) return;
 
-    // Calculate visible portion relative to the full SVG
-    const scale = containerRect.width / (svgRect.width || 1);
-    const visibleWidth = containerRect.width;
-    const visibleHeight = containerRect.height;
+    const svgData = new XMLSerializer().serializeToString(svgEl);
+    const svgBlob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
+    const url = URL.createObjectURL(svgBlob);
 
-    // Get current transform
-    const transform = svgEl.style.transform || "";
-    const translateMatch = transform.match(/translate\(([-\d.]+)px,\s*([-\d.]+)px\)/);
+    const img = new Image();
+    img.onload = () => {
+      if (renderId !== renderCountRef.current) { URL.revokeObjectURL(url); return; }
+      const availH = height - 24;
+      ctx.clearRect(0, 0, width, availH);
+      ctx.fillStyle = "rgba(13, 17, 23, 0.9)";
+      ctx.fillRect(0, 0, width, availH);
+
+      const scale = Math.min(width / svgRect.width, availH / svgRect.height, 1);
+      const drawW = svgRect.width * scale;
+      const drawH = svgRect.height * scale;
+      const ox = (width - drawW) / 2;
+      const oy = (availH - drawH) / 2;
+      ctx.drawImage(img, ox, oy, drawW, drawH);
+      drawViewportIndicator(ctx, svgRect, width, availH, ox, oy, drawW, drawH);
+      URL.revokeObjectURL(url);
+    };
+    img.onerror = () => URL.revokeObjectURL(url);
+    img.src = url;
+    return () => URL.revokeObjectURL(url);
+  }, [svgWrapperRef, svgVersion, zoomLevel, width, height]);
+
+  // Extract viewport indicator drawing to shared function
+  function drawViewportIndicator(
+    ctx: CanvasRenderingContext2D,
+    svgRect: DOMRect,
+    w: number,
+    h: number,
+    ox: number,
+    oy: number,
+    drawW: number,
+    drawH: number
+  ) {
+    const containerRect = containerRef.current?.getBoundingClientRect();
+    if (!containerRect) return;
+
+    const transform = svgWrapperRef.current?.querySelector("svg")?.style.transform || "";
     const scaleMatch = transform.match(/scale\(([-\d.]+)\)/);
+    const translateMatch = transform.match(/translate\(([-\d.]+)px,\s*([-\d.]+)px\)/);
+    const k = scaleMatch ? parseFloat(scaleMatch[1]) : 1;
     const tx = translateMatch ? parseFloat(translateMatch[1]) : 0;
     const ty = translateMatch ? parseFloat(translateMatch[2]) : 0;
-    const k = scaleMatch ? parseFloat(scaleMatch[1]) : 1;
 
-    // SVG dimensions at original scale
-    const svgW = svgRect.width / k;
-    const svgH = svgRect.height / k;
-
-    // Viewport rect in minimap coordinates
-    const minX = -tx / k;
-    const minY = -ty / k;
     const viewW = containerRect.width / k;
     const viewH = containerRect.height / k;
+    const originX = -tx / k;
+    const originY = -ty / k;
 
-    const miniX = (minX / svgW) * width;
-    const miniY = (minY / svgH) * height;
-    const miniW = Math.min((viewW / svgW) * width, width);
-    const miniH = Math.min((viewH / svgH) * height, height);
+    const vx = ox + (originX / svgRect.width) * drawW;
+    const vy = oy + (originY / svgRect.height) * drawH;
+    const vw = Math.min((viewW / svgRect.width) * drawW, drawW);
+    const vh = Math.min((viewH / svgRect.height) * drawH, drawH);
 
-    return {
-      x: Math.max(0, miniX),
-      y: Math.max(0, miniY),
-      w: Math.min(miniW, width - miniX),
-      h: Math.min(miniH, height - miniY),
-    };
-  }, [containerRef, svgWrapperRef, width, height]);
-
-  const [viewportRect, setViewportRect] = useState<ReturnType<typeof computeViewportRect>>(null);
-
-  // Update viewport rect periodically
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setViewportRect(computeViewportRect());
-    }, 200);
-    return () => clearInterval(interval);
-  }, [computeViewportRect]);
+    ctx.strokeStyle = "rgba(6, 182, 212, 0.7)";
+    ctx.lineWidth = 1.5;
+    ctx.fillStyle = "rgba(6, 182, 212, 0.1)";
+    ctx.fillRect(vx, vy, vw, vh);
+    ctx.strokeRect(vx, vy, vw, vh);
+  }
 
   // Handle click to navigate
   const handleClick = useCallback(
     (e: React.MouseEvent) => {
-      if (!minimapRef.current) return;
-      const rect = minimapRef.current.getBoundingClientRect();
+      if (!canvasRef.current) return;
+      const rect = canvasRef.current.getBoundingClientRect();
       const relX = (e.clientX - rect.left) / rect.width;
       const relY = (e.clientY - rect.top) / rect.height;
       onNavigate(Math.max(0, Math.min(1, relX)), Math.max(0, Math.min(1, relY)));
@@ -125,8 +141,8 @@ export default function Minimap({
     if (!isDragging) return;
 
     const handleMouseMove = (e: MouseEvent) => {
-      if (!minimapRef.current) return;
-      const rect = minimapRef.current.getBoundingClientRect();
+      if (!canvasRef.current) return;
+      const rect = canvasRef.current.getBoundingClientRect();
       const relX = (e.clientX - rect.left) / rect.width;
       const relY = (e.clientY - rect.top) / rect.height;
       onNavigate(Math.max(0, Math.min(1, relX)), Math.max(0, Math.min(1, relY)));
@@ -153,28 +169,15 @@ export default function Minimap({
         </span>
       </div>
 
-      {/* SVG container */}
-      <div
-        ref={minimapRef}
-        className="relative w-full overflow-hidden cursor-pointer"
-        style={{ height: `${height - 24}px` }}
+      {/* Canvas */}
+      <canvas
+        ref={canvasRef}
+        width={width}
+        height={height - 24}
+        className="cursor-pointer block"
         onClick={handleClick}
         onMouseDown={handleMouseDown}
       />
-
-      {/* Viewport indicator */}
-      {viewportRect && (
-        <div
-          className="absolute pointer-events-none border border-cyan-400/60 bg-cyan-400/5 rounded-sm"
-          style={{
-            left: `${24 + viewportRect.x}px`,
-            top: `${24 + viewportRect.y}px`,
-            width: `${viewportRect.w}px`,
-            height: `${viewportRect.h}px`,
-            transition: isDragging ? "none" : "left 0.1s, top 0.1s, width 0.1s, height 0.1s",
-          }}
-        />
-      )}
     </div>
   );
 }
