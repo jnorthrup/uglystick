@@ -343,7 +343,7 @@ function layoutBus(parsed: ParsedGraph, direction: string): LayoutResult {
         id: n.id,
         label: n.label,
         x: side * (NODE_W / 2 + NODE_GAP + 20),
-        y: i * (NODE_H + LAYER_GAP),
+        y: i * (NODE_H + 20),  // Tight: only 20px gap between nodes
       });
     } else {
       nodes.push({
@@ -467,6 +467,24 @@ function buildResultFromNodes(nodes: LayoutNode[], edges: LayoutEdge[]): LayoutR
 
 // ──────────────────────────── SVG Renderer ───────────────────────────────────
 
+function escapeXml(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
+}
+
+function renderMultilineText(cx: number, cy: number, text: string, fontSize: number, fill: string, attrs: string): string {
+  // Split on <br> or \n and render each line
+  const lines = text.split(/<br\s*\/?>|\n/).filter(Boolean);
+  if (lines.length <= 1) {
+    return `<text x="${cx}" y="${cy + fontSize * 0.35}" fill="${fill}" font-size="${fontSize}" text-anchor="middle" dominant-baseline="middle" pointer-events="none" ${attrs}>${escapeXml(text)}</text>`;
+  }
+  const lineH = fontSize * 1.3;
+  const totalH = lines.length * lineH;
+  const startY = cy - totalH / 2 + lineH / 2;
+  return lines.map((line, i) =>
+    `<text x="${cx}" y="${startY + i * lineH + fontSize * 0.35}" fill="${fill}" font-size="${fontSize}" text-anchor="middle" pointer-events="none" ${attrs}>${escapeXml(line)}</text>`
+  ).join("");
+}
+
 export function renderSVG(result: LayoutResult, theme: string = "dark"): string {
   const { nodes, edges, width, height } = result;
   const isDark = theme === "dark" || theme === "observatory" || theme === "dracula" || theme === "nord";
@@ -503,17 +521,17 @@ export function renderSVG(result: LayoutResult, theme: string = "dark"): string 
       const mx = mid.x + ox;
       const my = mid.y + oy;
       svg += `<rect x="${mx - 20}" y="${my - 8}" width="40" height="14" fill="${labelBg}" rx="3" opacity="0.9" />`;
-      svg += `<text x="${mx}" y="${my + 2}" fill="${textColor}" font-size="9" text-anchor="middle">${e.label}</text>`;
+      svg += `<text x="${mx}" y="${my + 2}" fill="${textColor}" font-size="9" text-anchor="middle">${escapeXml(e.label)}</text>`;
     }
   }
 
-  // Nodes
+  // Nodes (text is SIBLING of rect, never child)
   const r = 6;
   for (const n of nodes) {
     const x = n.x + ox - NODE_W / 2;
     const y = n.y + oy - NODE_H / 2;
     svg += `<rect x="${x}" y="${y}" width="${NODE_W}" height="${NODE_H}" rx="${r}" fill="${nodeFill}" stroke="${nodeStroke}" stroke-width="1.5" />`;
-    svg += `<text x="${n.x + ox}" y="${n.y + oy + 1}" fill="${textColor}" font-size="11" text-anchor="middle" dominant-baseline="middle" pointer-events="none">${n.label}</text>`;
+    svg += renderMultilineText(n.x + ox, n.y + oy + 1, n.label, 11, textColor, '');
   }
 
   svg += "</svg>";
