@@ -49,8 +49,7 @@ export default function GraphCanvas() {
 
         mermaid.initialize({
           startOnLoad: false,
-          // "base" = no default theme colors; we set everything via themeVariables
-          theme: "base",
+          theme: mermaidTheme as "dark" | "default" | "forest" | "neutral" | "base",
           securityLevel: "loose",
           fontFamily: "JetBrains Mono, monospace",
           fontSize: 14,
@@ -66,7 +65,6 @@ export default function GraphCanvas() {
             mermaidTheme === "dark"
               ? {
                   primaryColor: "#1e3a5f",
-                  primaryTextColor: "#cdd6f4",
                   primaryBorderColor: "#00D2FF",
                   lineColor: "#00D2FF",
                   secondaryColor: "#2d1f5e",
@@ -77,39 +75,7 @@ export default function GraphCanvas() {
                   clusterBkg: "#151f2e",
                   titleColor: "#00D2FF",
                   edgeLabelBackground: "#1a2744",
-                  fontFamily: "JetBrains Mono, monospace",
-                }
-              : mermaidTheme === "forest"
-              ? {
-                  primaryColor: "#4a7c59",
-                  primaryTextColor: "#f0f0f0",
-                  primaryBorderColor: "#2d5a3d",
-                  lineColor: "#2d5a3d",
-                  secondaryColor: "#5a8f6a",
-                  tertiaryColor: "#1a2e1f",
-                  background: "#1a2e1f",
-                  mainBkg: "#2d4a35",
-                  nodeBorder: "#4a7c59",
-                  clusterBkg: "#234030",
-                  titleColor: "#7bc67e",
-                  edgeLabelBackground: "#2a3f2f",
-                  fontFamily: "JetBrains Mono, monospace",
-                }
-              : mermaidTheme === "neutral"
-              ? {
-                  primaryColor: "#e8e8e8",
-                  primaryTextColor: "#1a1a1a",
-                  primaryBorderColor: "#999",
-                  lineColor: "#666",
-                  secondaryColor: "#d4d4d4",
-                  tertiaryColor: "#f5f5f5",
-                  background: "#f5f5f5",
-                  mainBkg: "#e8e8e8",
-                  nodeBorder: "#999",
-                  clusterBkg: "#eee",
-                  titleColor: "#333",
-                  edgeLabelBackground: "#f0f0f0",
-                  fontFamily: "JetBrains Mono, monospace",
+                  // Do NOT override primaryTextColor — let theme default handle it
                 }
               : {},
         });
@@ -197,7 +163,7 @@ export default function GraphCanvas() {
     }
 
     dispatch({ type: "SET_IS_RENDERING", rendering: false });
-  }, [state.code, state.format, state.theme, dispatch]);
+  }, [state.code, state.format, state.theme, state.layout, state.direction, dispatch]);
 
   const applyZoom = useCallback(async () => {
     if (!containerRef.current || !svgWrapperRef.current) return;

@@ -25,64 +25,81 @@ export default function Minimap({
 }: MinimapProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [svgVersion, setSvgVersion] = useState(0);
   const renderCountRef = useRef(0);
 
-  // Watch for SVG DOM changes (content replaced by Mermaid/DOT)
+  // Poll for SVG changes every 2s (keeps minimap in sync without thrashing blob URLs)
   useEffect(() => {
-    // Trigger initial render check
-    setSvgVersion((v) => v + 1);
+    let cancelled = false;
 
-    const observer = new MutationObserver(() => {
-      setSvgVersion((v) => v + 1);
-    });
+    const renderMinimap = () => {
+      if (cancelled) return;
+      const canvas = canvasRef.current;
+      const svgEl = svgWrapperRef.current?.querySelector("svg");
+      if (!canvas || !svgEl) return;
 
-    // Observe the wrapper for child list changes (SVG being replaced)
-    if (svgWrapperRef.current) {
-      observer.observe(svgWrapperRef.current, { childList: true, subtree: true });
-    }
+      const renderId = ++renderCountRef.current;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
 
-    return () => observer.disconnect();
-  }, [svgWrapperRef]);
+      const svgRect = svgEl.getBoundingClientRect();
+      if (!svgRect.width || !svgRect.height) return;
 
-  // Render minimap whenever SVG changes
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    const svgEl = svgWrapperRef.current?.querySelector("svg");
-    if (!canvas || !svgEl) return;
+      // Clone SVG and ensure proper namespace
+      const clone = svgEl.cloneNode(true) as SVGElement;
+      clone.setAttribute("width", String(svgRect.width));
+      clone.setAttribute("height", String(svgRect.height));
+      if (!clone.getAttribute("xmlns")) {
+        clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+      }
+      // Ensure text elements have visible fill
+      clone.querySelectorAll("text").forEach((t) => {
+        if (!t.getAttribute("fill")) t.setAttribute("fill", "#cdd6f4");
+      });
 
-    const renderId = ++renderCountRef.current;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+      const svgData = new XMLSerializer().serializeToString(clone);
+      const svgBlob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
+      const url = URL.createObjectURL(svgBlob);
 
-    const svgRect = svgEl.getBoundingClientRect();
-    if (!svgRect.width || !svgRect.height) return;
+      const img = new Image();
+      img.onload = () => {
+        if (renderId !== renderCountRef.current || cancelled) { URL.revokeObjectURL(url); return; }
+        const availH = height - 24;
+        ctx.clearRect(0, 0, width, availH);
+        ctx.fillStyle = "rgba(13, 17, 23, 0.9)";
+        ctx.fillRect(0, 0, width, availH);
 
-    const svgData = new XMLSerializer().serializeToString(svgEl);
-    const svgBlob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
-    const url = URL.createObjectURL(svgBlob);
-
-    const img = new Image();
-    img.onload = () => {
-      if (renderId !== renderCountRef.current) { URL.revokeObjectURL(url); return; }
-      const availH = height - 24;
-      ctx.clearRect(0, 0, width, availH);
-      ctx.fillStyle = "rgba(13, 17, 23, 0.9)";
-      ctx.fillRect(0, 0, width, availH);
-
-      const scale = Math.min(width / svgRect.width, availH / svgRect.height, 1);
-      const drawW = svgRect.width * scale;
-      const drawH = svgRect.height * scale;
-      const ox = (width - drawW) / 2;
-      const oy = (availH - drawH) / 2;
-      ctx.drawImage(img, ox, oy, drawW, drawH);
-      drawViewportIndicator(ctx, svgRect, width, availH, ox, oy, drawW, drawH);
-      URL.revokeObjectURL(url);
+        const scale = Math.min(width / svgRect.width, availH / svgRect.height, 1);
+        const drawW = svgRect.width * scale;
+        const drawH = svgRect.height * scale;
+        const ox = (width - drawW) / 2;
+        const oy = (availH - drawH) / 2;
+        ctx.drawImage(img, ox, oy, drawW, drawH);
+        drawViewportIndicator(ctx, svgRect, width, availH, ox, oy, drawW, drawH);
+        URL.revokeObjectURL(url);
+      };
+      img.onerror = () => {
+        if (cancelled) return;
+        URL.revokeObjectURL(url);
+        // Fallback: draw a simple indicator
+        const availH = height - 24;
+        ctx.clearRect(0, 0, width, availH);
+        ctx.fillStyle = "rgba(13, 17, 23, 0.9)";
+        ctx.fillRect(0, 0, width, availH);
+        ctx.fillStyle = "#6b7280";
+        ctx.font = "10px monospace";
+        ctx.textAlign = "center";
+        ctx.fillText("Rendering…", width / 2, availH / 2);
+      };
+      img.src = url;
     };
-    img.onerror = () => URL.revokeObjectURL(url);
-    img.src = url;
-    return () => URL.revokeObjectURL(url);
-  }, [svgWrapperRef, svgVersion, zoomLevel, width, height]);
+
+    renderMinimap();
+    const interval = setInterval(renderMinimap, 2000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [svgWrapperRef, zoomLevel, width, height]);
 
   // Extract viewport indicator drawing to shared function
   function drawViewportIndicator(

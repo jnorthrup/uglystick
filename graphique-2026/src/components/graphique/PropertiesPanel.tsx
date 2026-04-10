@@ -47,7 +47,7 @@ function DiagnosticRow({
 }
 
 export default function PropertiesPanel() {
-  const { state } = useGraphique();
+  const { state, dispatch } = useGraphique();
 
   const errorCount = state.diagnostics.filter((d) => d.severity === "error").length;
   const warnCount = state.diagnostics.filter((d) => d.severity === "warning").length;
