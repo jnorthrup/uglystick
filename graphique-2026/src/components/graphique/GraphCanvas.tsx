@@ -5,7 +5,6 @@
 
 import { useEffect, useRef, useCallback, useState } from "react";
 import { useGraphique } from "@/store/graphique-store";
-import { themeToMermaid } from "@/lib/graph/mermaid-utils";
 import { computeLayout, renderSVG } from "@/lib/graph/elk-engine";
 import { lint } from "@/lib/linter";
 import { ZoomIn, ZoomOut, Maximize2, RotateCcw } from "lucide-react";
@@ -16,7 +15,7 @@ let d3ZoomInstance: ReturnType<typeof import("d3-zoom")["zoom"]> | null = null;
 let d3Selection: unknown = null;
 
 // ── DOT WASM: lazily-loaded Graphviz instance ────────────────────────────────
-let graphvizPromise: Promise<import("@hpcc-js/wasm").Graphviz> | null = null;
+let graphvizPromise: Promise<any> | null = null;
 function getGraphviz() {
   if (!graphvizPromise) {
     graphvizPromise = import("@hpcc-js/wasm/graphviz").then((m) => m.Graphviz.load());
