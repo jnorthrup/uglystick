@@ -1,388 +1,329 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// GRAPHIQUE 2026 — ELK Layout Engine (standalone, post-render)
-// Uses elkjs to compute positions, applies them to Mermaid SVG via transforms.
-// Bypasses Mermaid's broken ELK renderer which drops text labels.
+// GRAPHIQUE 2026 — D3 Force Layout Engine
+// Pure d3-force simulation with direct SVG rendering.
+// No ELK, no Mermaid layout — we compute positions and draw SVG ourselves.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import ELK from "elkjs/lib/elk.bundled.js";
+import * as d3 from "d3";
 
-interface ELKNode {
+interface SimNode extends d3.SimulationNodeDatum {
   id: string;
-  labels?: Array<{ text: string; width?: number; height?: number }>;
-  width?: number;
-  height?: number;
-  x?: number;
-  y?: number;
+  label: string;
+  layer?: number;
+  angle?: number;
+  radius?: number;
 }
 
-interface ELKEdge {
+interface SimLink extends d3.SimulationLinkDatum<SimNode> {
   id: string;
-  sources: string[];
-  targets: string[];
-  labels?: Array<{ text: string }>;
+  source: string;
+  target: string;
+  label?: string;
 }
 
-interface ELKGraph {
-  id: string;
-  children: ELKNode[];
-  edges: ELKEdge[];
-  layoutOptions?: Record<string, string>;
+interface GraphData {
+  nodes: { id: string; label: string }[];
+  edges: { id: string; source: string; target: string; label?: string }[];
 }
 
-export interface LayoutResult {
-  nodes: Map<string, { x: number; y: number; w: number; h: number }>;
-  edges: Map<string, { points: { x: number; y: number }[] }>;
-  graphWidth: number;
-  graphHeight: number;
-}
-
-/**
- * Parse Mermaid flowchart into ELK graph structure.
- */
-function parseMermaidToELK(code: string): { graph: ELKGraph; edgeLabels: Map<string, string> } {
+function parseGraph(code: string): GraphData {
   const lines = code
     .split("\n")
     .map((l) => l.trim())
     .filter((l) => l && !l.startsWith("%%") && !l.startsWith("style ") && !l.startsWith("classDef ") && !l.startsWith("linkStyle "));
 
-  const nodeIds = new Set<string>();
-  const nodeLabels = new Map<string, string>();
-  const edges: ELKEdge[] = [];
-  const edgeLabels = new Map<string, string>();
+  const nodes = new Map<string, string>();
+  const edges: { id: string; source: string; target: string; label?: string }[] = [];
   let edgeId = 0;
 
   for (const line of lines) {
     if (line.startsWith("graph ") || line.startsWith("flowchart ") || line.startsWith("subgraph")) continue;
 
-    // Parse edges: A --> B, A -->|label| B, A --- B, A -.-> B, A ==> B
     const edgeMatch = line.match(
       /^([A-Za-z0-9_]+)\s*(?:--[\s.=>]*)(?:\|([^|]*)\|)?\s*[-.=>]*\s*([A-Za-z0-9_]+)/
     );
     if (edgeMatch) {
       const [, src, label, tgt] = edgeMatch;
-      nodeIds.add(src);
-      nodeIds.add(tgt);
-      if (!nodeLabels.has(src)) nodeLabels.set(src, src);
-      if (!nodeLabels.has(tgt)) nodeLabels.set(tgt, tgt);
-      const eid = `e${edgeId++}`;
-      edges.push({ id: eid, sources: [src], targets: [tgt] });
-      if (label && label.trim()) {
-        edgeLabels.set(eid, label.trim());
-        edges[edges.length - 1].labels = [{ text: label.trim() }];
-      }
+      if (!nodes.has(src)) nodes.set(src, src);
+      if (!nodes.has(tgt)) nodes.set(tgt, tgt);
+      edges.push({ id: `e${edgeId++}`, source: src, target: tgt, label: label?.trim() });
       continue;
     }
 
-    // Parse node definitions: A[Label], B{Label}, C((Label)), D[Label]
     const nodeMatch = line.match(/^([A-Za-z0-9_]+)[\[\(\{\<]/);
     if (nodeMatch) {
       const id = nodeMatch[1];
-      nodeIds.add(id);
-      // Extract label from brackets
       const labelMatch = line.match(
         /\[([^\]]*)\]|\{([^}]*)\}|\<([^\>]*)\>|\(\(([^\)]*)\)\)|\[\(([^\)]*)\)\)/
       );
       const label = labelMatch
         ? (labelMatch[1] || labelMatch[2] || labelMatch[3] || labelMatch[4] || labelMatch[5] || id)
         : id;
-      nodeLabels.set(id, label);
+      nodes.set(id, label);
     }
   }
 
-  const elkNodes: ELKNode[] = Array.from(nodeIds).map((id) => ({
-    id,
-    labels: [{ text: nodeLabels.get(id) || id }],
-    width: 150,
-    height: 60,
-  }));
-
-  return { graph: { id: "root", children: elkNodes, edges }, edgeLabels };
+  return {
+    nodes: Array.from(nodes.entries()).map(([id, label]) => ({ id, label })),
+    edges,
+  };
 }
 
-/**
- * Compute ELK layout for a given algorithm.
- */
-async function computeELKLayout(
+function configureSimulation(
+  nodes: SimNode[],
+  links: SimLink[],
+  algorithm: string,
+  direction: string
+): d3.Simulation<SimNode, SimLink> {
+  const width = 1200;
+  const height = 800;
+
+  // Assign initial positions based on layout type
+  nodes.forEach((n, i) => {
+    n.x = width / 2;
+    n.y = height / 2;
+  });
+
+  const sim = d3
+    .forceSimulation<SimNode>(nodes)
+    .force("charge", d3.forceManyBody().strength(-400))
+    .force("center", d3.forceCenter(width / 2, height / 2))
+    .force("collision", d3.forceCollide().radius(80))
+    .stop();
+
+  switch (algorithm) {
+    case "hierarchical":
+    case "elk-layered": {
+      // Assign layers by topological sort
+      const layers = computeLayers(nodes, links);
+      sim
+        .force("link", d3.forceLink<SimNode, SimLink>(links).id((d) => d.id).strength(0.8).distance(100))
+        .force("y", d3.forceY((d) => (d.layer ?? 0) * 100 + 80).strength(0.9))
+        .force("x", d3.forceX(width / 2).strength(0.1));
+      break;
+    }
+    case "tree":
+    case "elk-mrtree": {
+      const layers = computeLayers(nodes, links);
+      sim
+        .force("link", d3.forceLink<SimNode, SimLink>(links).id((d) => d.id).strength(0.9).distance(80))
+        .force("y", d3.forceY((d) => (d.layer ?? 0) * 100 + 80).strength(1.0))
+        .force("x", d3.forceX(width / 2).strength(0.3))
+        .force("charge", d3.forceManyBody().strength(-600));
+      break;
+    }
+    case "force":
+    case "elk-force": {
+      sim
+        .force("link", d3.forceLink<SimNode, SimLink>(links).id((d) => d.id).strength(0.5).distance(120))
+        .force("charge", d3.forceManyBody().strength(-500));
+      break;
+    }
+    case "circular":
+    case "elk-radial": {
+      const radius = Math.min(width, height) * 0.35;
+      nodes.forEach((n, i) => {
+        const angle = (i / nodes.length) * 2 * Math.PI;
+        n.x = width / 2 + Math.cos(angle) * radius;
+        n.y = height / 2 + Math.sin(angle) * radius;
+      });
+      sim
+        .force("link", d3.forceLink<SimNode, SimLink>(links).id((d) => d.id).strength(0.3).distance(150))
+        .force("charge", d3.forceManyBody().strength(-300))
+        .force("center", d3.forceCenter(width / 2, height / 2).strength(0.05));
+      break;
+    }
+    case "orthogonal": {
+      const layers = computeLayers(nodes, links);
+      sim
+        .force("link", d3.forceLink<SimNode, SimLink>(links).id((d) => d.id).strength(0.7).distance(100))
+        .force("y", d3.forceY((d) => (d.layer ?? 0) * 100 + 80).strength(0.9))
+        .force("x", d3.forceX(width / 2).strength(0.15))
+        .force("charge", d3.forceManyBody().strength(-350));
+      break;
+    }
+    case "bus": {
+      // Bus: nodes arranged in a line with a central trunk
+      sim
+        .force("link", d3.forceLink<SimNode, SimLink>(links).id((d) => d.id).strength(0.3).distance(60))
+        .force("x", d3.forceX((d, i) => {
+          const side = i % 2 === 0 ? width * 0.3 : width * 0.7;
+          return side;
+        }).strength(0.8))
+        .force("y", d3.forceY((d, i) => i * 100 + 80).strength(0.9))
+        .force("charge", d3.forceManyBody().strength(-200));
+      break;
+    }
+    default: {
+      sim.force("link", d3.forceLink<SimNode, SimLink>(links).id((d) => d.id).strength(0.5).distance(100));
+    }
+  }
+
+  return sim;
+}
+
+function computeLayers(nodes: SimNode[], links: SimLink[]): Map<string, number> {
+  const adj = new Map<string, string[]>();
+  const inDegree = new Map<string, number>();
+  const nodeIds = new Set(nodes.map((n) => n.id));
+
+  nodes.forEach((n) => {
+    adj.set(n.id, []);
+    inDegree.set(n.id, 0);
+  });
+
+  for (const link of links) {
+    if (nodeIds.has(link.source) && nodeIds.has(link.target)) {
+      adj.get(link.source)?.push(link.target);
+      inDegree.set(link.target, (inDegree.get(link.target) || 0) + 1);
+    }
+  }
+
+  // BFS topological sort
+  const queue: string[] = [];
+  const layers = new Map<string, number>();
+
+  nodes.forEach((n) => {
+    if ((inDegree.get(n.id) || 0) === 0) {
+      queue.push(n.id);
+      layers.set(n.id, 0);
+    }
+  });
+
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+    const currentLayer = layers.get(current) || 0;
+    for (const neighbor of adj.get(current) || []) {
+      const newLayer = currentLayer + 1;
+      if (!layers.has(neighbor) || layers.get(neighbor)! < newLayer) {
+        layers.set(neighbor, newLayer);
+      }
+      inDegree.set(neighbor, (inDegree.get(neighbor) || 0) - 1);
+      if ((inDegree.get(neighbor) || 0) === 0) {
+        queue.push(neighbor);
+      }
+    }
+  }
+
+  // Assign unvisited nodes to layer 0
+  nodes.forEach((n) => {
+    if (!layers.has(n.id)) layers.set(n.id, 0);
+  });
+
+  return layers;
+}
+
+export interface LayoutResult {
+  nodes: { id: string; label: string; x: number; y: number; w: number; h: number }[];
+  edges: { id: string; source: string; target: string; label?: string; sx: number; sy: number; tx: number; ty: number }[];
+  width: number;
+  height: number;
+}
+
+export async function computeLayout(
   code: string,
   algorithm: string,
   direction: string
 ): Promise<LayoutResult> {
-  // Bus routing is handled manually — elkjs doesn't have a bus algorithm
-  if (algorithm === "bus") {
-    return computeBusLayout(code, direction);
-  }
+  const { nodes: nodeList, edges: edgeList } = parseGraph(code);
+  if (nodeList.length === 0) return { nodes: [], edges: [], width: 0, height: 0 };
 
-  const { graph, edgeLabels } = parseMermaidToELK(code);
+  const simNodes: SimNode[] = nodeList.map((n) => ({ ...n }));
+  const simLinks: SimLink[] = edgeList.map((e) => ({ ...e }));
 
-  if (graph.children.length === 0) {
-    return { nodes: new Map(), edges: new Map(), graphWidth: 0, graphHeight: 0 };
-  }
+  const sim = configureSimulation(simNodes, simLinks, algorithm, direction);
 
-  const dirMap: Record<string, string> = { TD: "DOWN", BT: "UP", LR: "RIGHT", RL: "LEFT" };
-  const elkDir = dirMap[direction] || "DOWN";
-
-  const baseOptions: Record<string, string> = {
-    "elk.direction": elkDir,
-    "elk.spacing.nodeNode": "40",
-    "elk.spacing.edgeNode": "20",
-    "elk.spacing.edgeEdge": "15",
-    "elk.padding": "[top=20,left=20,bottom=20,right=20]",
-    "elk.edgeRouting": "POLYLINE",
-  };
-
-  const algorithmOptions: Record<string, Record<string, string>> = {
-    "elk-layered": {
-      "elk.algorithm": "layered",
-      "elk.layered.spacing.nodeNodeBetweenLayers": "80",
-      "elk.layered.nodePlacement.strategy": "NETWORK_SIMPLEX",
-    },
-    "elk-mrtree": {
-      "elk.algorithm": "mrtree",
-    },
-    "elk-radial": {
-      "elk.algorithm": "radial",
-      "elk.spacing.nodeNode": "60",
-    },
-    "elk-force": {
-      "elk.algorithm": "force",
-      "elk.force.iterations": "300",
-    },
-    hierarchical: {
-      "elk.algorithm": "layered",
-      "elk.layered.spacing.nodeNodeBetweenLayers": "80",
-    },
-    force: {
-      "elk.algorithm": "force",
-      "elk.force.iterations": "500",
-      "elk.spacing.nodeNode": "80",
-    },
-    tree: {
-      "elk.algorithm": "mrtree",
-      "elk.spacing.nodeNode": "30",
-    },
-    circular: {
-      "elk.algorithm": "radial",
-      "elk.spacing.nodeNode": "60",
-    },
-    orthogonal: {
-      "elk.algorithm": "layered",
-      "elk.edgeRouting": "ORTHOGONAL",
-      "elk.layered.spacing.nodeNodeBetweenLayers": "60",
-    },
-  };
-
-  graph.layoutOptions = {
-    ...baseOptions,
-    ...(algorithmOptions[algorithm] || {}),
-  };
-
-  const elk = new ELK();
-
-  try {
-    const laidOut = await elk.layout(graph);
-    const nodes = new Map<string, { x: number; y: number; w: number; h: number }>();
-    const edges = new Map<string, { points: { x: number; y: number }[] }>();
-    let maxX = 0;
-    let maxY = 0;
-
-    if (laidOut.children) {
-      for (const node of laidOut.children) {
-        if (node.x !== undefined && node.y !== undefined) {
-          nodes.set(node.id, {
-            x: node.x,
-            y: node.y,
-            w: node.width || 150,
-            h: node.height || 60,
-          });
-          maxX = Math.max(maxX, node.x + (node.width || 150));
-          maxY = Math.max(maxY, node.y + (node.height || 60));
-        }
-      }
-    }
-
-    if (laidOut.edges) {
-      for (const edge of laidOut.edges) {
-        if (edge.sections && edge.sections.length > 0) {
-          const points = edge.sections.flatMap((s) => [
-            { x: s.startPoint.x, y: s.startPoint.y },
-            ...(s.bendPoints || []),
-            { x: s.endPoint.x, y: s.endPoint.y },
-          ]);
-          edges.set(edge.id, { points });
-        }
-      }
-    }
-
-    return { nodes, edges, graphWidth: maxX, graphHeight: maxY };
-  } catch (err) {
-    console.warn("[ELK] Layout failed:", err);
-    return { nodes: new Map(), edges: new Map(), graphWidth: 0, graphHeight: 0 };
-  }
-}
-
-/**
- * Compute bus-style layout: nodes arranged in a column with a central trunk.
- * All edges route through a shared vertical bus line.
- */
-function computeBusLayout(code: string, direction: string): LayoutResult {
-  const { graph } = parseMermaidToELK(code);
-  if (graph.children.length === 0) {
-    return { nodes: new Map(), edges: new Map(), graphWidth: 0, graphHeight: 0 };
-  }
-
-  const nodes = new Map<string, { x: number; y: number; w: number; h: number }>();
-  const edges = new Map<string, { points: { x: number; y: number }[] }>();
+  // Run simulation synchronously
+  sim.tick(300);
 
   const nodeW = 150;
   const nodeH = 60;
-  const busSpacing = 40; // distance from node to bus
-  const nodeSpacing = 80; // vertical gap between nodes
-  const isVertical = direction === "TB" || direction === "BT";
-  const isReversed = direction === "BT" || direction === "RL";
 
-  // Arrange nodes in a single column/row
-  const sorted = [...graph.children];
-  if (isReversed) sorted.reverse();
+  const resultNodes = simNodes.map((n) => ({
+    id: n.id,
+    label: n.label,
+    x: n.x ?? 0,
+    y: n.y ?? 0,
+    w: nodeW,
+    h: nodeH,
+  }));
 
-  if (isVertical) {
-    const busX = 300; // central bus x position
-    sorted.forEach((node, i) => {
-      const y = i * (nodeH + nodeSpacing);
-      // Place node to the right of the bus, alternating sides for visual balance
-      const nodeX = i % 2 === 0 ? busX - nodeW - busSpacing : busX + busSpacing;
-      nodes.set(node.id, { x: nodeX, y, w: nodeW, h: nodeH });
-    });
-
-    // Create edges from each node to the bus
-    sorted.forEach((node, i) => {
-      const pos = nodes.get(node.id);
-      if (!pos) return;
-      const edgeId = `e${i}`;
-      const busConnectX = busX;
-      const busConnectY = pos.y + nodeH / 2;
-      // Edge from node center-right/left to bus
-      const fromX = pos.x + (i % 2 === 0 ? nodeW : 0);
-      const fromY = pos.y + nodeH / 2;
-      edges.set(edgeId, {
-        points: [
-          { x: fromX, y: fromY },
-          { x: busConnectX, y: busConnectY },
-        ],
-      });
-    });
-
-    // Add a trunk edge connecting all bus connection points
-    if (sorted.length > 1) {
-      const firstPos = nodes.get(sorted[0].id);
-      const lastPos = nodes.get(sorted[sorted.length - 1].id);
-      if (firstPos && lastPos) {
-        edges.set("bus-trunk", {
-          points: [
-            { x: busX, y: firstPos.y + nodeH / 2 },
-            { x: busX, y: lastPos.y + nodeH / 2 },
-          ],
-        });
-      }
-    }
-
-    return { nodes, edges, graphWidth: busX + busSpacing + nodeW + 40, graphHeight: (sorted.length - 1) * (nodeH + nodeSpacing) + nodeH + 40 };
-  } else {
-    // Horizontal layout: bus is a vertical line
-    const busY = 200;
-    sorted.forEach((node, i) => {
-      const x = i * (nodeW + nodeSpacing);
-      const nodeY = i % 2 === 0 ? busY - nodeH - busSpacing : busY + busSpacing;
-      nodes.set(node.id, { x, y: nodeY, w: nodeW, h: nodeH });
-    });
-
-    sorted.forEach((node, i) => {
-      const pos = nodes.get(node.id);
-      if (!pos) return;
-      const edgeId = `e${i}`;
-      const busConnectY = busY;
-      const busConnectX = pos.x + nodeW / 2;
-      const fromX = pos.x + nodeW / 2;
-      const fromY = pos.y + (i % 2 === 0 ? nodeH : 0);
-      edges.set(edgeId, {
-        points: [
-          { x: fromX, y: fromY },
-          { x: busConnectX, y: busConnectY },
-        ],
-      });
-    });
-
-    if (sorted.length > 1) {
-      const firstPos = nodes.get(sorted[0].id);
-      const lastPos = nodes.get(sorted[sorted.length - 1].id);
-      if (firstPos && lastPos) {
-        edges.set("bus-trunk", {
-          points: [
-            { x: firstPos.x + nodeW / 2, y: busY },
-            { x: lastPos.x + nodeW / 2, y: busY },
-          ],
-        });
-      }
-    }
-
-    return { nodes, edges, graphWidth: (sorted.length - 1) * (nodeW + nodeSpacing) + nodeW + 40, graphHeight: busY + busSpacing + nodeH + 40 };
-  }
-}
-
-/**
- * Apply ELK-computed positions to Mermaid SVG.
- * Translates .node groups to match ELK positions.
- */
-export function applyELKLayoutToSVG(
-  svgEl: SVGSVGElement | null,
-  layout: LayoutResult
-): void {
-  if (!svgEl || layout.nodes.size === 0) return;
-
-  const nodeGroups = svgEl.querySelectorAll(".node");
-  if (!nodeGroups.length) return;
-
-  // Build a label-to-node-id map for matching
-  const labelToId = new Map<string, string>();
-  for (const [id, pos] of layout.nodes) {
-    labelToId.set(id.toLowerCase(), id);
-  }
-
-  nodeGroups.forEach((group) => {
-    // Find the text/tspan element to get the label
-    const textEl = group.querySelector("text") || group.querySelector("tspan");
-    if (!textEl) return;
-
-    const textContent = textEl.textContent?.trim();
-    if (!textContent) return;
-
-    // Try to match by label
-    for (const [label, id] of labelToId) {
-      if (textContent.toLowerCase().includes(label) || label.includes(textContent.toLowerCase().substring(0, 10))) {
-        const pos = layout.nodes.get(id);
-        if (pos) {
-          group.setAttribute("transform", `translate(${pos.x + 10}, ${pos.y + 10})`);
-          break;
-        }
-      }
-    }
+  const resultEdges = edgeList.map((e, i) => {
+    const src = simNodes.find((n) => n.id === e.source);
+    const tgt = simNodes.find((n) => n.id === e.target);
+    return {
+      id: e.id,
+      source: e.source,
+      target: e.target,
+      label: e.label,
+      sx: src?.x ?? 0,
+      sy: src?.y ?? 0,
+      tx: tgt?.x ?? 0,
+      ty: tgt?.y ?? 0,
+    };
   });
+
+  let maxW = 0;
+  let maxH = 0;
+  for (const n of resultNodes) {
+    maxW = Math.max(maxW, n.x + n.w);
+    maxH = Math.max(maxH, n.y + n.h);
+  }
+
+  return { nodes: resultNodes, edges: resultEdges, width: maxW + 40, height: maxH + 40 };
 }
 
-/**
- * Compute and apply ELK layout directly to Mermaid SVG.
- * This is the main entry point called from GraphCanvas.
- */
-export async function computeAndApplyLayout(
-  svgEl: SVGSVGElement | null,
-  code: string,
-  algorithm: string,
-  direction: string
-): Promise<boolean> {
-  if (!svgEl) return false;
+function roundedRect(x: number, y: number, w: number, h: number): string {
+  const r = 8;
+  return `M${x + r},${y} L${x + w - r},${y} Q${x + w},${y} ${x + w},${y + r} L${x + w},${y + h - r} Q${x + w},${y + h} ${x + w - r},${y + h} L${x + r},${y + h} Q${x},${y + h} ${x},${y + h - r} L${x},${y + r} Q${x},${y} ${x + r},${y} Z`;
+}
 
-  const layout = await computeELKLayout(code, algorithm, direction);
-  if (layout.nodes.size === 0) return false;
+export function renderSVG(graph: LayoutResult, theme: string = "dark"): string {
+  const padding = 30;
+  const w = graph.width + padding * 2;
+  const h = graph.height + padding * 2;
 
-  applyELKLayoutToSVG(svgEl, layout);
-  return true;
+  const isDark = theme === "dark" || theme === "observatory" || theme === "dracula" || theme === "nord";
+  const nodeFill = isDark ? "#1e3a5f" : "#f0f4f8";
+  const nodeStroke = isDark ? "#00D2FF" : "#3b82f6";
+  const edgeColor = isDark ? "#00D2FF" : "#3b82f6";
+  const textColor = isDark ? "#cdd6f4" : "#1e293b";
+  const labelBg = isDark ? "#1a2744" : "#e2e8f0";
+
+  let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" font-family="JetBrains Mono, monospace">`;
+
+  svg += `<defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="${edgeColor}" />
+    </marker>
+  </defs>`;
+
+  // Edges first (so they render behind nodes)
+  for (const edge of graph.edges) {
+    const sx = edge.sx + padding + 75;
+    const sy = edge.sy + padding + 30;
+    const tx = edge.tx + padding + 75;
+    const ty = edge.ty + padding + 30;
+
+    svg += `<line x1="${sx}" y1="${sy}" x2="${tx}" y2="${ty}" stroke="${edgeColor}" stroke-width="2" marker-end="url(#arrowhead)" />`;
+
+    if (edge.label) {
+      const mx = (sx + tx) / 2;
+      const my = (sy + ty) / 2;
+      svg += `<rect x="${mx - 20}" y="${my - 10}" width="40" height="16" fill="${labelBg}" rx="3" />`;
+      svg += `<text x="${mx}" y="${my + 3}" fill="${textColor}" font-size="10" text-anchor="middle">${edge.label}</text>`;
+    }
+  }
+
+  // Nodes
+  for (const node of graph.nodes) {
+    const nx = node.x + padding;
+    const ny = node.y + padding;
+
+    svg += `<path d="${roundedRect(nx, ny, node.w, node.h)}" fill="${nodeFill}" stroke="${nodeStroke}" stroke-width="2" />`;
+    svg += `<text x="${nx + node.w / 2}" y="${ny + node.h / 2 + 4}" fill="${textColor}" font-size="12" text-anchor="middle" pointer-events="none">${node.label}</text>`;
+  }
+
+  svg += "</svg>";
+  return svg;
 }

@@ -5,8 +5,8 @@
 
 import { useEffect, useRef, useCallback, useState } from "react";
 import { useGraphique } from "@/store/graphique-store";
-import { themeToMermaid, extractFlowchartStats, injectLayoutForAlgorithm } from "@/lib/graph/mermaid-utils";
-import { computeAndApplyLayout } from "@/lib/graph/elk-engine";
+import { themeToMermaid, extractFlowchartStats } from "@/lib/graph/mermaid-utils";
+import { computeLayout, renderSVG } from "@/lib/graph/elk-engine";
 import { lint } from "@/lib/linter";
 import { ZoomIn, ZoomOut, Maximize2, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -44,81 +44,21 @@ export default function GraphCanvas() {
 
     if (state.format === "mermaid") {
       try {
-        const mermaid = (await import("mermaid")).default;
+        // Use D3 force layout for all rendering
+        const layout = await computeLayout(state.code, state.layout, state.direction);
+        if (renderId !== renderIdRef.current) return;
 
-        const mermaidTheme = themeToMermaid(state.theme);
-
-        mermaid.initialize({
-          startOnLoad: false,
-          theme: mermaidTheme as "dark" | "default" | "forest" | "neutral" | "base",
-          securityLevel: "loose",
-          fontFamily: "JetBrains Mono, monospace",
-          fontSize: 14,
-          htmlLabels: true,
-          flowchart: {
-            curve: "basis",
-            padding: 20,
-            nodeSpacing: 50,
-            rankSpacing: 60,
-            htmlLabels: true,
-          },
-          themeVariables:
-            mermaidTheme === "dark"
-              ? {
-                  primaryColor: "#1e3a5f",
-                  primaryBorderColor: "#00D2FF",
-                  lineColor: "#00D2FF",
-                  secondaryColor: "#2d1f5e",
-                  tertiaryColor: "#0d1117",
-                  background: "#0D1117",
-                  mainBkg: "#1e2d40",
-                  nodeBorder: "#00D2FF",
-                  clusterBkg: "#151f2e",
-                  titleColor: "#00D2FF",
-                  edgeLabelBackground: "#1a2744",
-                  // Do NOT override primaryTextColor — let theme default handle it
-                }
-              : {},
-        });
-
-        // Inject layout algorithm config (ELK for elk-* algorithms)
-        const codeWithLayout = injectLayoutForAlgorithm(state.code, state.layout, state.direction);
-
-        // Generate unique id for this render
-        const id = `graphique-${Date.now()}`;
-
-        const { svg } = await mermaid.render(id, codeWithLayout);
-
-        if (renderId !== renderIdRef.current) return; // stale render
-
-        // Sanitize with DOMPurify
-        let safeSvg = svg;
-        if (typeof window !== "undefined") {
-          const DOMPurify = (await import("dompurify")).default;
-          safeSvg = DOMPurify.sanitize(svg, {
-            USE_PROFILES: { svg: true, svgFilters: true },
-          });
-        }
-
+        const safeSvg = renderSVG(layout, state.theme);
         svgWrapperRef.current.innerHTML = safeSvg;
 
-        // Apply ELK layout computation (bus, elk-*, etc.)
-        const svgInWrapper = svgWrapperRef.current.querySelector("svg");
-        if (svgInWrapper) {
-          await computeAndApplyLayout(svgInWrapper, state.code, state.layout, state.direction);
-        }
-
-        // Extract stats
         const stats = extractFlowchartStats(state.code);
         dispatch({
           type: "SET_GRAPH_STATS",
-          nodeCount: stats.nodeCount,
-          edgeCount: stats.edgeCount,
+          nodeCount: layout.nodes.length || stats.nodeCount,
+          edgeCount: layout.edges.length || stats.edgeCount,
         });
 
         dispatch({ type: "SET_RENDER_ERROR", error: null });
-
-        // Apply d3-zoom after render
         requestAnimationFrame(() => applyZoom());
       } catch (err) {
         if (renderId !== renderIdRef.current) return;
