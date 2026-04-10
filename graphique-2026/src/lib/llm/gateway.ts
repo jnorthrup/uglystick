@@ -10,6 +10,8 @@ import { LLM_PROVIDERS } from "../graph/types";
 // ──────────────────────────── Key Management ─────────────────────────────────
 
 const KEY_PREFIX = "graphique_key_";
+const MODEL_CACHE_PREFIX = "graphique_models_";
+const MODEL_CACHE_TTL = 3600_000; // 1 hour
 
 /** Simple XOR obfuscation — not true encryption but prevents casual inspection */
 function obfuscate(text: string, seed: string): string {
@@ -56,6 +58,8 @@ export function retrieveApiKey(providerId: string): string | null {
 export function removeApiKey(providerId: string): void {
   if (typeof window === "undefined") return;
   localStorage.removeItem(KEY_PREFIX + providerId);
+  // Also clear cached models for this provider
+  localStorage.removeItem(MODEL_CACHE_PREFIX + providerId);
 }
 
 export function hasApiKey(providerId: string): boolean {
@@ -68,6 +72,70 @@ export function getAllStoredProviders(): string[] {
   return Object.keys(localStorage)
     .filter((k) => k.startsWith(KEY_PREFIX))
     .map((k) => k.replace(KEY_PREFIX, ""));
+}
+
+// ──────────────────────────── Model Caching ──────────────────────────────────
+
+interface ModelCacheEntry {
+  models: string[];
+  fetchedAt: number;
+}
+
+/** Fetch available models from provider's /models endpoint */
+export async function fetchProviderModels(
+  providerId: string
+): Promise<string[]> {
+  const provider = LLM_PROVIDERS.find((p) => p.id === providerId);
+  if (!provider) throw new Error(`Unknown provider: ${providerId}`);
+
+  const apiKey = retrieveApiKey(providerId);
+  if (!apiKey) return provider.models; // fallback to hardcoded
+
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
+
+    const resp = await fetch(`${provider.baseUrl}/models`, {
+      headers: { Authorization: `Bearer ${apiKey}` },
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+
+    if (!resp.ok) return provider.models;
+
+    const json = await resp.json();
+    // Different providers use different response shapes
+    const modelList = json.data || json.models || [];
+    const models = modelList
+      .map((m: { id: string }) => m.id)
+      .filter((id: string) => typeof id === "string" && id.length > 0)
+      .sort();
+
+    // Cache the result
+    const cache: ModelCacheEntry = { models, fetchedAt: Date.now() };
+    localStorage.setItem(MODEL_CACHE_PREFIX + providerId, JSON.stringify(cache));
+
+    return models;
+  } catch {
+    return provider.models;
+  }
+}
+
+/** Get cached models for a provider (returns hardcoded fallback if not cached/expired) */
+export function getCachedModels(providerId: string): string[] {
+  // Check localStorage cache first
+  try {
+    const raw = localStorage.getItem(MODEL_CACHE_PREFIX + providerId);
+    if (raw) {
+      const entry: ModelCacheEntry = JSON.parse(raw);
+      if (Date.now() - entry.fetchedAt < MODEL_CACHE_TTL) {
+        return entry.models;
+      }
+    }
+  } catch {}
+
+  // Fall back to hardcoded list
+  return LLM_PROVIDERS.find((p) => p.id === providerId)?.models ?? [];
 }
 
 // ──────────────────────────── LLM Request ────────────────────────────────────
@@ -132,10 +200,23 @@ export class LLMGateway {
     });
 
     if (options.onStream) {
-      const resp = await fetch(url, { method: "POST", headers, body });
+      let resp: Response;
+      try {
+        resp = await fetch(url, { method: "POST", headers, body });
+      } catch (err) {
+        // Network-level error (CORS, DNS, offline)
+        throw new Error(
+          `Network error: ${options.providerId} API is unreachable. ` +
+          `Check your internet connection and ensure the API key is valid. ` +
+          `(${err instanceof Error ? err.message : "unknown error"})`
+        );
+      }
       if (!resp.ok) {
-        const err = await resp.text();
-        throw new Error(`LLM API error ${resp.status}: ${err}`);
+        const errText = await resp.text();
+        // Try to parse as JSON for a cleaner message
+        let detail = errText;
+        try { detail = JSON.parse(errText).error?.message || errText; } catch {}
+        throw new Error(`API error ${resp.status}: ${detail}`);
       }
       const reader = resp.body?.getReader();
       if (!reader) throw new Error("No response body");
@@ -167,10 +248,21 @@ export class LLMGateway {
       return { content: fullContent };
     }
 
-    const resp = await fetch(url, { method: "POST", headers, body });
+    let resp: Response;
+    try {
+      resp = await fetch(url, { method: "POST", headers, body });
+    } catch (err) {
+      throw new Error(
+        `Network error: ${options.providerId} API is unreachable. ` +
+        `Check your internet connection and ensure the API key is valid. ` +
+        `(${err instanceof Error ? err.message : "unknown error"})`
+      );
+    }
     if (!resp.ok) {
-      const err = await resp.text();
-      throw new Error(`LLM API error ${resp.status}: ${err}`);
+      const errText = await resp.text();
+      let detail = errText;
+      try { detail = JSON.parse(errText).error?.message || errText; } catch {}
+      throw new Error(`API error ${resp.status}: ${detail}`);
     }
 
     const json = await resp.json();

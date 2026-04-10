@@ -11,6 +11,8 @@ import {
   storeApiKey,
   retrieveApiKey,
   hasApiKey,
+  fetchProviderModels,
+  getCachedModels,
   buildDiagramGenerationPrompt,
   buildFixPrompt,
   buildExplainPrompt,
@@ -75,16 +77,21 @@ export default function LLMPanel() {
   const [apiKeyInput, setApiKeyInput] = useState("");
   const [selectedProvider, setSelectedProvider] = useState(state.llmProvider);
   const [keyStatuses, setKeyStatuses] = useState<Record<string, boolean>>({});
+  const [modelLists, setModelLists] = useState<Record<string, string[]>>({});
+  const [fetchingModels, setFetchingModels] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const streamBuf = useRef("");
 
-  // Check stored keys on mount
+  // Check stored keys and load cached models on mount
   useEffect(() => {
     const statuses: Record<string, boolean> = {};
+    const models: Record<string, string[]> = {};
     for (const p of LLM_PROVIDERS) {
       statuses[p.id] = hasApiKey(p.id);
+      models[p.id] = getCachedModels(p.id);
     }
     setKeyStatuses(statuses);
+    setModelLists(models);
   }, []);
 
   useEffect(() => {
@@ -189,12 +196,24 @@ export default function LLMPanel() {
     [state.llmProvider, state.llmModel, state.code, state.llmChat, dispatch, setCode]
   );
 
-  const handleSaveKey = useCallback(() => {
+  const handleSaveKey = useCallback(async () => {
     if (!apiKeyInput.trim()) return;
     storeApiKey(selectedProvider, apiKeyInput.trim());
     setKeyStatuses((s) => ({ ...s, [selectedProvider]: true }));
     setApiKeyInput("");
+    // Fetch and cache models for this provider
+    setFetchingModels(true);
+    const models = await fetchProviderModels(selectedProvider);
+    setModelLists((prev) => ({ ...prev, [selectedProvider]: models }));
+    setFetchingModels(false);
   }, [selectedProvider, apiKeyInput]);
+
+  const handleRefreshModels = useCallback(async () => {
+    setFetchingModels(true);
+    const models = await fetchProviderModels(state.llmProvider);
+    setModelLists((prev) => ({ ...prev, [state.llmProvider]: models }));
+    setFetchingModels(false);
+  }, [state.llmProvider]);
 
   const visibleChat = state.llmChat.filter(
     (m) => m.content !== "▋" && m.content !== "__STREAM_UPDATE__"
@@ -280,7 +299,17 @@ export default function LLMPanel() {
 
             {/* Model selector */}
             <div className="mb-3">
-              <label className="text-xs text-muted-foreground mb-1 block">Model</label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-xs text-muted-foreground">Model</label>
+                <button
+                  type="button"
+                  onClick={handleRefreshModels}
+                  className="text-[9px] font-mono text-muted-foreground/50 hover:text-purple-400 transition-colors"
+                  title="Refresh model list from API"
+                >
+                  {fetchingModels ? "refreshing…" : "↻ refresh"}
+                </button>
+              </div>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
@@ -292,8 +321,8 @@ export default function LLMPanel() {
                     <ChevronDown className="w-3 h-3 opacity-60" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent className="bg-surface border-border/60">
-                  {(LLM_PROVIDERS.find((p) => p.id === state.llmProvider)?.models ?? []).map(
+                <DropdownMenuContent className="bg-surface border-border/60 max-h-64 overflow-y-auto">
+                  {(modelLists[state.llmProvider] ?? LLM_PROVIDERS.find((p) => p.id === state.llmProvider)?.models ?? []).map(
                     (m) => (
                       <DropdownMenuItem
                         key={m}
