@@ -174,6 +174,8 @@ export interface LLMProvider {
   baseUrl: string;
   models: string[];
   requiresKey: boolean;
+  /** Whether the provider supports direct browser-to-API calls (CORS-enabled) */
+  browserCompatible: boolean;
 }
 
 export const LLM_PROVIDERS: LLMProvider[] = [
@@ -183,6 +185,7 @@ export const LLM_PROVIDERS: LLMProvider[] = [
     baseUrl: "https://api.openai.com/v1",
     models: ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo"],
     requiresKey: true,
+    browserCompatible: true,
   },
   {
     id: "openrouter",
@@ -196,6 +199,7 @@ export const LLM_PROVIDERS: LLMProvider[] = [
       "deepseek/deepseek-r1",
     ],
     requiresKey: true,
+    browserCompatible: true,
   },
   {
     id: "nvidia-nim",
@@ -206,6 +210,7 @@ export const LLM_PROVIDERS: LLMProvider[] = [
       "meta/llama-3.3-70b-instruct",
     ],
     requiresKey: true,
+    browserCompatible: false, // No CORS support — requires server proxy
   },
   {
     id: "groq",
@@ -217,6 +222,7 @@ export const LLM_PROVIDERS: LLMProvider[] = [
       "gemma2-9b-it",
     ],
     requiresKey: true,
+    browserCompatible: false, // No CORS support — requires server proxy
   },
   {
     id: "mistral",
@@ -224,6 +230,7 @@ export const LLM_PROVIDERS: LLMProvider[] = [
     baseUrl: "https://api.mistral.ai/v1",
     models: ["mistral-large-latest", "mistral-medium-latest", "open-mixtral-8x7b"],
     requiresKey: true,
+    browserCompatible: false, // No CORS support — requires server proxy
   },
 ];
 

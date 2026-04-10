@@ -94,6 +94,9 @@ export default function LLMPanel() {
     setModelLists(models);
   }, []);
 
+  // Only show browser-compatible providers in UI
+  const browserProviders = LLM_PROVIDERS.filter((p) => p.browserCompatible);
+
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [state.llmChat]);
@@ -274,7 +277,7 @@ export default function LLMPanel() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="bg-surface border-border/60 w-64">
-                  {LLM_PROVIDERS.map((p) => (
+                  {browserProviders.map((p) => (
                     <DropdownMenuItem
                       key={p.id}
                       onClick={() => {
@@ -363,7 +366,7 @@ export default function LLMPanel() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent className="bg-surface border-border/60">
-                    {LLM_PROVIDERS.map((p) => (
+                    {browserProviders.map((p) => (
                       <DropdownMenuItem
                         key={p.id}
                         onClick={() => setSelectedProvider(p.id)}
@@ -397,7 +400,7 @@ export default function LLMPanel() {
 
             {/* Key status list */}
             <div className="mt-3 space-y-1">
-              {LLM_PROVIDERS.map((p) => (
+              {browserProviders.map((p) => (
                 <div key={p.id} className="flex items-center justify-between py-1">
                   <span className="text-xs text-muted-foreground">{p.name}</span>
                   {keyStatuses[p.id] ? (

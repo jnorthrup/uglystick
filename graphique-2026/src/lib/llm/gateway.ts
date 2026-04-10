@@ -171,7 +171,9 @@ export class LLMGateway {
   }
 
   getAvailableProviders(): LLMProvider[] {
-    return LLM_PROVIDERS.filter((p) => !p.requiresKey || hasApiKey(p.id));
+    return LLM_PROVIDERS.filter(
+      (p) => p.browserCompatible && (!p.requiresKey || hasApiKey(p.id))
+    );
   }
 
   async complete(options: LLMRequestOptions): Promise<LLMResponse> {
