@@ -18,6 +18,7 @@ interface MinimapProps {
 export default function Minimap({
   svgWrapperRef,
   containerRef,
+  zoomLevel,
   onNavigate,
   width = 200,
   height = 130,
