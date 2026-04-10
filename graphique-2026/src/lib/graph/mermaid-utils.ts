@@ -81,8 +81,9 @@ export function injectElkLayout(
 
 /**
  * Applies layout algorithm to Mermaid code.
- * Injects spacing config per algorithm so each layout feels distinct.
- * Uses Mermaid's native renderer (text renders correctly).
+ * Strategy: ONLY change direction. No %%{init}%% blocks.
+ * Mermaid's native flowchart renderer handles text correctly.
+ * Layout differences (spacing) are set via mermaid.initialize().
  */
 export function injectLayoutForAlgorithm(
   code: string,
@@ -90,46 +91,17 @@ export function injectLayoutForAlgorithm(
   direction: string
 ): string {
   const trimmed = code.trim();
-  if (!trimmed.startsWith("graph ") && !trimmed.startsWith("flowchart ")) {
+  // Strip any existing init blocks FIRST to avoid conflicts
+  const withoutInit = trimmed.replace(/^%%\{[\s\S]*?\}%%\s*/g, "");
+  // Only apply to flowcharts
+  if (!withoutInit.startsWith("graph ") && !withoutInit.startsWith("flowchart ")) {
     return code;
   }
-
-  const withoutInit = trimmed.replace(/^%%\{[\s\S]*?\}%%\s*/m, "");
-  const withDir = withoutInit.replace(
+  // Replace direction
+  return withoutInit.replace(
     /^(\s*(?:graph|flowchart)\s+)(TB|TD|BT|LR|RL)/im,
     `$1${direction}`
   );
-
-  // ELK algorithms: use ELK renderer with distinct config per algorithm
-  // NOTE: Mermaid 11 ELK renderer needs both defaultRenderer AND layout keys
-  const elkConfig: Record<string, string> = {
-    "elk-layered": `{"flowchart":{"defaultRenderer":"elk","layout":"elk-layered","htmlLabels":true,"nodeSpacing":35,"rankSpacing":45}}`,
-    "elk-mrtree": `{"flowchart":{"defaultRenderer":"elk","layout":"elk-mrtree","htmlLabels":true,"nodeSpacing":25,"rankSpacing":40}}`,
-    "elk-radial": `{"flowchart":{"defaultRenderer":"elk","layout":"elk-radial","htmlLabels":true,"nodeSpacing":50,"rankSpacing":50}}`,
-    "elk-force": `{"flowchart":{"defaultRenderer":"elk","layout":"elk-force","htmlLabels":true,"nodeSpacing":90,"rankSpacing":90}}`,
-  };
-
-  const elk = elkConfig[algorithm];
-  if (elk) {
-    return `%%{init: ${elk}}%%\n${withDir}`;
-  }
-
-  // Non-ELK algorithms use Mermaid's native renderer with distinct spacing
-  const spacing: Record<string, string> = {
-    hierarchical: `{"htmlLabels":true,"flowchart":{"htmlLabels":true,"nodeSpacing":50,"rankSpacing":60}}`,
-    force: `{"htmlLabels":true,"flowchart":{"htmlLabels":true,"nodeSpacing":80,"rankSpacing":80}}`,
-    tree: `{"htmlLabels":true,"flowchart":{"htmlLabels":true,"nodeSpacing":30,"rankSpacing":50}}`,
-    circular: `{"htmlLabels":true,"flowchart":{"htmlLabels":true,"nodeSpacing":60,"rankSpacing":60}}`,
-    orthogonal: `{"htmlLabels":true,"flowchart":{"htmlLabels":true,"nodeSpacing":40,"rankSpacing":50}}`,
-    bus: `{"htmlLabels":true,"flowchart":{"htmlLabels":true,"nodeSpacing":20,"rankSpacing":30}}`,
-  };
-
-  const config = spacing[algorithm];
-  if (config) {
-    return `%%{init: ${config}}%%\n${withDir}`;
-  }
-
-  return withDir;
 }
 
 /**

@@ -11,6 +11,7 @@ import React, {
   useCallback,
 } from "react";
 import type { DiagramFormat, LayoutAlgorithm, GraphiqueTheme, IDiagnostic } from "../lib/graph/types";
+import { LLM_PROVIDERS } from "../lib/graph/types";
 import type { DockPosition } from "../lib/storage";
 import { loadAppState, saveAppState } from "../lib/storage";
 
@@ -205,6 +206,13 @@ export function GraphiqueProvider({ children }: { children: React.ReactNode }) {
   // Load persisted state on mount
   useEffect(() => {
     const saved = loadAppState();
+    // Migration: if stored LLM provider isn't browser-compatible, fallback to openai
+    const browserProviderIds = LLM_PROVIDERS.filter((p) => p.browserCompatible).map((p) => p.id);
+    const storedProvider = saved.llmProvider || "openai";
+    const safeProvider = browserProviderIds.includes(storedProvider) ? storedProvider : "openai";
+    if (safeProvider !== storedProvider) {
+      try { localStorage.removeItem("graphique_key_" + storedProvider); } catch {}
+    }
     dispatch({
       type: "LOAD_STATE",
       state: {
@@ -212,8 +220,8 @@ export function GraphiqueProvider({ children }: { children: React.ReactNode }) {
         format: saved.currentFormat,
         layout: saved.currentLayout,
         theme: saved.currentTheme,
-        llmProvider: saved.llmProvider,
-        llmModel: saved.llmModel,
+        llmProvider: safeProvider,
+        llmModel: safeProvider === "openai" ? "gpt-4o" : saved.llmModel,
         editorOpen: saved.editorPanelOpen,
         propertiesOpen: saved.propertiesPanelOpen,
         minimapOpen: saved.minimapOpen,

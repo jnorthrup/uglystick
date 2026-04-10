@@ -97,6 +97,14 @@ export default function LLMPanel() {
   // Only show browser-compatible providers in UI
   const browserProviders = LLM_PROVIDERS.filter((p) => p.browserCompatible);
 
+  // Auto-switch to a browser-compatible provider if current one isn't
+  useEffect(() => {
+    if (!LLM_PROVIDERS.find((p) => p.id === state.llmProvider)?.browserCompatible) {
+      dispatch({ type: "SET_LLM_PROVIDER", provider: "openai" });
+      dispatch({ type: "SET_LLM_MODEL", model: "gpt-4o" });
+    }
+  }, [state.llmProvider, dispatch]);
+
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [state.llmChat]);

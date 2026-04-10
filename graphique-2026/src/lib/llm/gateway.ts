@@ -179,6 +179,12 @@ export class LLMGateway {
   async complete(options: LLMRequestOptions): Promise<LLMResponse> {
     const provider = this.providers.get(options.providerId);
     if (!provider) throw new Error(`Unknown provider: ${options.providerId}`);
+    if (!provider.browserCompatible) {
+      throw new Error(
+        `Provider "${provider.name}" does not support direct browser calls (no CORS). ` +
+        `Switch to OpenAI or OpenRouter in the LLM Settings panel.`
+      );
+    }
 
     const apiKey = retrieveApiKey(options.providerId);
     if (provider.requiresKey && !apiKey) {
