@@ -80,9 +80,11 @@ export function injectElkLayout(
 }
 
 /**
- * Injects the appropriate layout configuration for the selected algorithm.
- * For elk-* algorithms: injects %%{init}%% with ELK renderer + specific algorithm.
- * For native algorithms: just sets the graph direction.
+ * Applies layout algorithm to Mermaid code.
+ * Strategy: change direction only. Mermaid's native flowchart renderer
+ * handles text rendering correctly. Layout algorithms that need different
+ * spacing (elk-*, force, etc.) are configured via mermaid.initialize()
+ * in GraphCanvas, not via %%{init}%% blocks.
  */
 export function injectLayoutForAlgorithm(
   code: string,
@@ -90,37 +92,18 @@ export function injectLayoutForAlgorithm(
   direction: string
 ): string {
   const trimmed = code.trim();
-  // Only apply to flowcharts (not sequence, class, mindmap, etc.)
+  // Only apply to flowcharts
   if (!trimmed.startsWith("graph ") && !trimmed.startsWith("flowchart ")) {
     return code;
   }
 
-  // Remove existing %%{init}%% block
+  // Remove existing %%{init}%% block to avoid conflicts
   const withoutInit = trimmed.replace(/^%%\{[\s\S]*?\}%%\s*/m, "");
   // Set direction
-  const withDir = withoutInit.replace(
+  return withoutInit.replace(
     /^(\s*(?:graph|flowchart)\s+)(TB|TD|BT|LR|RL)/im,
     `$1${direction}`
   );
-
-  // ELK algorithms: inject full ELK config
-  // NOTE: ELK uses SVG text elements (not htmlLabels), so we set htmlLabels:false
-  // and ensure theme has proper text color for visibility
-  const elkConfigs: Record<string, string> = {
-    "elk-layered": `{"theme":"base","flowchart":{"defaultRenderer":"elk","curve":"basis","useMaxWidth":true,"elk":{"algorithm":"layered","elk.direction":"DOWN","spacing":"{ edge: 20, node: 20, border: 10 }"}}}`,
-    "elk-mrtree": `{"theme":"base","flowchart":{"defaultRenderer":"elk","curve":"basis","useMaxWidth":true,"elk":{"algorithm":"mrtree","elk.direction":"DOWN"}}}`,
-    "elk-radial": `{"theme":"base","flowchart":{"defaultRenderer":"elk","curve":"basis","useMaxWidth":true,"elk":{"algorithm":"radial"}}}`,
-    "elk-force": `{"theme":"base","flowchart":{"defaultRenderer":"elk","curve":"basis","useMaxWidth":true,"elk":{"algorithm":"force"}}}`,
-    bus: `{"theme":"base","flowchart":{"defaultRenderer":"elk","curve":"basis","useMaxWidth":true,"elk":{"algorithm":"stress"}}}`,
-  };
-
-  const elkConfig = elkConfigs[algorithm];
-  if (elkConfig) {
-    return `%%{init: ${elkConfig}}%%\n${withDir}`;
-  }
-
-  // Native algorithms: just set direction, let Mermaid handle layout
-  return withDir;
 }
 
 /**
