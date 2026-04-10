@@ -13,6 +13,61 @@ const NODE_GAP = 40;
 const LAYER_GAP = 90;
 const PADDING = 50;
 
+// ──────────────────────── Cycle Detection ─────────────────────────────────────
+
+function detectAndBreakCycles(
+  nodes: { id: string; label: string }[],
+  edges: { source: string; target: string; label?: string }[]
+): { source: string; target: string; label?: string }[] {
+  const adj = new Map<string, string[]>();
+  const nodeIds = new Set(nodes.map((n) => n.id));
+  nodes.forEach((n) => adj.set(n.id, []));
+  for (const e of edges) {
+    if (nodeIds.has(e.source) && nodeIds.has(e.target)) {
+      adj.get(e.source)!.push(e.target);
+    }
+  }
+
+  // DFS cycle detection, remove back-edges
+  const WHITE = 0, GRAY = 1, BLACK = 2;
+  const color = new Map<string, number>();
+  nodes.forEach((n) => color.set(n.id, WHITE));
+
+  const result: { source: string; target: string; label?: string }[] = [];
+  const broken: string[] = [];
+
+  function dfs(u: string) {
+    color.set(u, GRAY);
+    for (const v of adj.get(u) || []) {
+      if (color.get(v) === GRAY) {
+        // Back-edge = cycle, skip it
+        broken.push(`${u}→${v}`);
+      } else if (color.get(v) === WHITE) {
+        dfs(v);
+      }
+    }
+    color.set(u, BLACK);
+  }
+
+  for (const n of nodes) {
+    if (color.get(n.id) === WHITE) dfs(n.id);
+  }
+
+  // Rebuild edges, skipping back-edges
+  const backEdgeSet = new Set(broken);
+  for (const e of edges) {
+    const key = `${e.source}→${e.target}`;
+    if (backEdgeSet.has(key)) {
+      // Add it as forward edge anyway (reversed direction) so it still renders
+      result.push({ source: e.target, target: e.source, label: e.label ? `↩${e.label}` : undefined });
+    } else {
+      result.push(e);
+    }
+  }
+
+  return result;
+}
+
 // ─────────────────────────────── Parser ──────────────────────────────────────
 
 interface ParsedGraph {
@@ -86,7 +141,7 @@ export interface LayoutResult {
 
 function layoutHierarchic(parsed: ParsedGraph, direction: string): LayoutResult {
   const nodeList = Array.from(parsed.nodes.entries()).map(([id, label]) => ({ id, label }));
-  const dag = graphDag(nodeList, parsed.edges);
+  const dag = graphDag(nodeList, detectAndBreakCycles(nodeList, parsed.edges));
   const isVertical = direction === "TB" || direction === "BT";
 
   sugiyama()
@@ -102,7 +157,7 @@ function layoutHierarchic(parsed: ParsedGraph, direction: string): LayoutResult 
 
 function layoutTree(parsed: ParsedGraph, direction: string): LayoutResult {
   const nodeList = Array.from(parsed.nodes.entries()).map(([id, label]) => ({ id, label }));
-  const dag = graphDag(nodeList, parsed.edges);
+  const dag = graphDag(nodeList, detectAndBreakCycles(nodeList, parsed.edges));
   const isVertical = direction === "TB" || direction === "BT";
 
   sugiyama()
@@ -230,7 +285,7 @@ function layoutCircular(parsed: ParsedGraph): LayoutResult {
 
 function layoutOrthogonal(parsed: ParsedGraph, direction: string): LayoutResult {
   const nodeList = Array.from(parsed.nodes.entries()).map(([id, label]) => ({ id, label }));
-  const dag = graphDag(nodeList, parsed.edges);
+  const dag = graphDag(nodeList, detectAndBreakCycles(nodeList, parsed.edges));
   const isVertical = direction === "TB" || direction === "BT";
 
   sugiyama()
@@ -269,7 +324,7 @@ function layoutOrthogonal(parsed: ParsedGraph, direction: string): LayoutResult 
 
 function layoutBalloon(parsed: ParsedGraph): LayoutResult {
   const nodeList = Array.from(parsed.nodes.entries()).map(([id, label]) => ({ id, label }));
-  const dag = graphDag(nodeList, parsed.edges);
+  const dag = graphDag(nodeList, detectAndBreakCycles(nodeList, parsed.edges));
 
   // Build adjacency for tree structure
   const children = new Map<string, string[]>();
@@ -548,13 +603,21 @@ export function computeLayout(
   const parsed = parseGraph(code);
   if (parsed.nodes.size === 0) return { nodes: [], edges: [], width: 400, height: 300 };
 
+  const tryLayout = (fn: () => LayoutResult): LayoutResult => {
+    try { return fn(); }
+    catch (err) {
+      console.warn("[Layout] Layout failed, falling back to organic:", err);
+      return layoutOrganic(parsed);
+    }
+  };
+
   switch (algorithm) {
     case "hierarchical":
     case "elk-layered":
-      return layoutHierarchic(parsed, direction);
+      return tryLayout(() => layoutHierarchic(parsed, direction));
     case "tree":
     case "elk-mrtree":
-      return layoutTree(parsed, direction);
+      return tryLayout(() => layoutTree(parsed, direction));
     case "force":
     case "elk-force":
       return layoutOrganic(parsed);
@@ -562,10 +625,14 @@ export function computeLayout(
     case "elk-radial":
       return algorithm === "circular" ? layoutCircular(parsed) : layoutRadial(parsed);
     case "orthogonal":
-      return layoutOrthogonal(parsed, direction);
+      return tryLayout(() => layoutOrthogonal(parsed, direction));
     case "bus":
       return layoutBus(parsed, direction);
+    case "balloon":
+      return tryLayout(() => layoutBalloon(parsed));
+    case "edgeRouter":
+      return tryLayout(() => layoutEdgeRouter(parsed, direction));
     default:
-      return layoutHierarchic(parsed, direction);
+      return tryLayout(() => layoutHierarchic(parsed, direction));
   }
 }
