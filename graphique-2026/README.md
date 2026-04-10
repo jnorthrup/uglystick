@@ -1,3 +1,7 @@
+*Copyright (C) 2026 Graphique Team. This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.*
+
+This project is licensed under the terms of the GNU Affero General Public License v3.0. See the [LICENSE](https://github.com/jnorthrup/uglystick/blob/main/LICENSE) file for more details.
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started
