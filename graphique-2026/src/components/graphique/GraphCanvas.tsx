@@ -6,6 +6,7 @@
 import { useEffect, useRef, useCallback, useState } from "react";
 import { useGraphique } from "@/store/graphique-store";
 import { themeToMermaid, extractFlowchartStats, injectLayoutForAlgorithm } from "@/lib/graph/mermaid-utils";
+import { computeAndApplyLayout } from "@/lib/graph/elk-engine";
 import { lint } from "@/lib/linter";
 import { ZoomIn, ZoomOut, Maximize2, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -100,6 +101,12 @@ export default function GraphCanvas() {
         }
 
         svgWrapperRef.current.innerHTML = safeSvg;
+
+        // Apply ELK layout computation (bus, elk-*, etc.)
+        const svgInWrapper = svgWrapperRef.current.querySelector("svg");
+        if (svgInWrapper) {
+          await computeAndApplyLayout(svgInWrapper, state.code, state.layout, state.direction);
+        }
 
         // Extract stats
         const stats = extractFlowchartStats(state.code);
