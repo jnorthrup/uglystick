@@ -1,77 +1,19 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// GRAPHIQUE 2026 — Layout Engine (d3-dag + d3-force)
-// Implements yFiles-style layouts: Hierarchic, Orthogonal, Organic, Radial,
-// Circular, Tree, Balloon, Edge Router, Bus Routing.
+// GRAPHIQUE 2026 — Layout Engine
+// Pure layer-based layout with topological sort + force cleanup.
+// No d3-dag dependency — works with any graph including cyclic ones.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { graphDag, sugiyama, decrossOpt, coordVert } from "d3-dag";
 import * as d3 from "d3";
 
-const NODE_W = 140;
-const NODE_H = 48;
+const NODE_W = 150;
+const NODE_H = 50;
 const NODE_GAP = 40;
-const LAYER_GAP = 90;
+const LAYER_GAP = 100;
 const PADDING = 50;
 
-// ──────────────────────── Cycle Detection ─────────────────────────────────────
-
-function detectAndBreakCycles(
-  nodes: { id: string; label: string }[],
-  edges: { source: string; target: string; label?: string }[]
-): { source: string; target: string; label?: string }[] {
-  const adj = new Map<string, string[]>();
-  const nodeIds = new Set(nodes.map((n) => n.id));
-  nodes.forEach((n) => adj.set(n.id, []));
-  for (const e of edges) {
-    if (nodeIds.has(e.source) && nodeIds.has(e.target)) {
-      adj.get(e.source)!.push(e.target);
-    }
-  }
-
-  // DFS cycle detection, remove back-edges
-  const WHITE = 0, GRAY = 1, BLACK = 2;
-  const color = new Map<string, number>();
-  nodes.forEach((n) => color.set(n.id, WHITE));
-
-  const result: { source: string; target: string; label?: string }[] = [];
-  const broken: string[] = [];
-
-  function dfs(u: string) {
-    color.set(u, GRAY);
-    for (const v of adj.get(u) || []) {
-      if (color.get(v) === GRAY) {
-        // Back-edge = cycle, skip it
-        broken.push(`${u}→${v}`);
-      } else if (color.get(v) === WHITE) {
-        dfs(v);
-      }
-    }
-    color.set(u, BLACK);
-  }
-
-  for (const n of nodes) {
-    if (color.get(n.id) === WHITE) dfs(n.id);
-  }
-
-  // Rebuild edges, skipping back-edges
-  const backEdgeSet = new Set(broken);
-  for (const e of edges) {
-    const key = `${e.source}→${e.target}`;
-    if (backEdgeSet.has(key)) {
-      // Add it as forward edge anyway (reversed direction) so it still renders
-      result.push({ source: e.target, target: e.source, label: e.label ? `↩${e.label}` : undefined });
-    } else {
-      result.push(e);
-    }
-  }
-
-  return result;
-}
-
-// ─────────────────────────────── Parser ──────────────────────────────────────
-
 interface ParsedGraph {
-  nodes: Map<string, string>;  // id -> label
+  nodes: Map<string, string>;
   edges: { source: string; target: string; label?: string }[];
 }
 
@@ -87,7 +29,6 @@ function parseGraph(code: string): ParsedGraph {
   for (const line of lines) {
     if (line.startsWith("graph ") || line.startsWith("flowchart ") || line.startsWith("subgraph")) continue;
 
-    // Strip bracket content to get clean node IDs for edge matching
     const stripped = line.replace(/[\[\(\{\<][^\]\)\}\>]*[\]\)\}\>]/g, " _ ");
     const edgeMatch = stripped.match(
       /^\s*([A-Za-z0-9_]+)\s*(?:--[\s.=>]*)(?:\|([^|]*)\|)?\s*[-.=>]*\s*([A-Za-z0-9_]+)/
@@ -116,7 +57,60 @@ function parseGraph(code: string): ParsedGraph {
   return { nodes, edges };
 }
 
-// ──────────────────────────── Layout Interface ───────────────────────────────
+/**
+ * Topological sort with cycle detection.
+ * Returns nodes grouped by layer, and edges with back-edges flagged.
+ */
+function topologicalLayers(
+  nodes: Map<string, string>,
+  edges: { source: string; target: string; label?: string }[]
+): { layers: string[][]; edgeSet: Set<string> } {
+  const nodeIds = Array.from(nodes.keys());
+  const inDegree = new Map<string, number>();
+  const adj = new Map<string, string[]>();
+  nodeIds.forEach((id) => { inDegree.set(id, 0); adj.set(id, []); });
+
+  const edgeSet = new Set<string>();
+  for (const e of edges) {
+    if (nodes.has(e.source) && nodes.has(e.target)) {
+      adj.get(e.source)!.push(e.target);
+      inDegree.set(e.target, (inDegree.get(e.target) || 0) + 1);
+      edgeSet.add(`${e.source}→${e.target}`);
+    }
+  }
+
+  // Kahn's algorithm
+  const queue: string[] = [];
+  nodeIds.forEach((id) => { if ((inDegree.get(id) || 0) === 0) queue.push(id); });
+
+  const layers: string[][] = [];
+  const assigned = new Set<string>();
+
+  while (queue.length > 0) {
+    const currentLayer = [...queue];
+    layers.push(currentLayer);
+    queue.length = 0;
+
+    for (const node of currentLayer) {
+      assigned.add(node);
+      for (const neighbor of adj.get(node) || []) {
+        inDegree.set(neighbor, inDegree.get(neighbor)! - 1);
+        if (inDegree.get(neighbor) === 0 && !assigned.has(neighbor)) {
+          queue.push(neighbor);
+        }
+      }
+    }
+  }
+
+  // Unassigned nodes are in cycles — put them in their own layers
+  for (const id of nodeIds) {
+    if (!assigned.has(id)) {
+      layers.push([id]);
+    }
+  }
+
+  return { layers, edgeSet };
+}
 
 export interface LayoutNode {
   id: string;
@@ -137,417 +131,157 @@ export interface LayoutResult {
   height: number;
 }
 
-// ──────────────────────────── Hierarchic (Sugiyama) ─────────────────────────
+/**
+ * Compute layout positions using layer-based placement.
+ * This always works — no DAG requirement, no external layout library.
+ */
+export function computeLayout(
+  code: string,
+  algorithm: string,
+  direction: string
+): LayoutResult {
+  const { nodes, edges } = parseGraph(code);
+  if (nodes.size === 0) return { nodes: [], edges: [], width: 400, height: 300 };
 
-function layoutHierarchic(parsed: ParsedGraph, direction: string): LayoutResult {
-  const nodeList = Array.from(parsed.nodes.entries()).map(([id, label]) => ({ id, label }));
-  const dag = graphDag(nodeList, detectAndBreakCycles(nodeList, parsed.edges));
+  const { layers } = topologicalLayers(nodes, edges);
   const isVertical = direction === "TB" || direction === "BT";
+  const isReversed = direction === "BT" || direction === "RL";
 
-  sugiyama()
-    .nodeSize(() => [NODE_W + NODE_GAP, NODE_H + LAYER_GAP])
-    .decross(decrossOpt())
-    .coord(coordVert())
-    (dag);
+  // Position nodes based on layers
+  const nodePositions = new Map<string, { x: number; y: number }>();
 
-  return extractDAGLayout(dag, parsed.nodes, parsed.edges, isVertical);
-}
+  if (isVertical) {
+    // Vertical layout: layers go top-to-bottom, nodes spread horizontally
+    for (let layerIdx = 0; layerIdx < layers.length; layerIdx++) {
+      const layer = layers[layerIdx];
+      const count = layer.length;
+      const totalWidth = count * NODE_W + (count - 1) * NODE_GAP;
+      const startX = -totalWidth / 2;
 
-// ──────────────────────────── Tree Layout ────────────────────────────────────
+      for (let i = 0; i < count; i++) {
+        const id = layer[i];
+        const x = startX + i * (NODE_W + NODE_GAP) + NODE_W / 2;
+        const y = isReversed
+          ? (layers.length - 1 - layerIdx) * (NODE_H + LAYER_GAP) + NODE_H / 2
+          : layerIdx * (NODE_H + LAYER_GAP) + NODE_H / 2;
+        nodePositions.set(id, { x, y });
+      }
+    }
+  } else {
+    // Horizontal layout: layers go left-to-right, nodes spread vertically
+    for (let layerIdx = 0; layerIdx < layers.length; layerIdx++) {
+      const layer = layers[layerIdx];
+      const count = layer.length;
+      const totalHeight = count * NODE_H + (count - 1) * NODE_GAP;
+      const startY = -totalHeight / 2;
 
-function layoutTree(parsed: ParsedGraph, direction: string): LayoutResult {
-  const nodeList = Array.from(parsed.nodes.entries()).map(([id, label]) => ({ id, label }));
-  const dag = graphDag(nodeList, detectAndBreakCycles(nodeList, parsed.edges));
-  const isVertical = direction === "TB" || direction === "BT";
-
-  sugiyama()
-    .nodeSize(() => [NODE_W + NODE_GAP * 1.5, NODE_H + LAYER_GAP])
-    .decross(decrossOpt())
-    .coord(coordVert())
-    (dag);
-
-  return extractDAGLayout(dag, parsed.nodes, parsed.edges, isVertical);
-}
-
-// ──────────────────────────── Organic (Force-Directed) ───────────────────────
-
-function layoutOrganic(parsed: ParsedGraph): LayoutResult {
-  const nodeArray = Array.from(parsed.nodes.entries()).map(([id, label]) => ({ id, label }));
-  const nodes = nodeArray.map((n) => ({ ...n, x: 0, y: 0, vx: 0, vy: 0 }));
-  const links = parsed.edges.map((e) => ({ source: e.source, target: e.target }));
-
-  const sim = d3.forceSimulation(nodes as any)
-    .force("link", d3.forceLink(links as any).id((d: any) => d.id).distance(120).strength(0.4))
-    .force("charge", d3.forceManyBody().strength(-400))
-    .force("center", d3.forceCenter(0, 0))
-    .force("collision", d3.forceCollide().radius(60))
-    .alphaDecay(0.02)
-    .stop();
-
-  sim.tick(300);
-
-  return buildResult(nodes, links, parsed.edges);
-}
-
-// ──────────────────────────── Radial Layout ──────────────────────────────────
-
-function layoutRadial(parsed: ParsedGraph): LayoutResult {
-  const nodes = Array.from(parsed.nodes.entries()).map(([id, label]) => ({ id, label, x: 0, y: 0 }));
-  const links = parsed.edges.map((e) => ({ source: e.source, target: e.target }));
-
-  // Compute layers via BFS from first node
-  const adj = new Map<string, string[]>();
-  nodes.forEach((n) => adj.set(n.id, []));
-  links.forEach((l) => {
-    adj.get(l.source)?.push(l.target);
-    adj.get(l.target)?.push(l.source);
-  });
-
-  const layers = new Map<string, number>();
-  const queue = [nodes[0].id];
-  layers.set(nodes[0].id, 0);
-  while (queue.length > 0) {
-    const cur = queue.shift()!;
-    const layer = layers.get(cur)!;
-    for (const nb of adj.get(cur) || []) {
-      if (!layers.has(nb)) {
-        layers.set(nb, layer + 1);
-        queue.push(nb);
+      for (let i = 0; i < count; i++) {
+        const id = layer[i];
+        const x = isReversed
+          ? (layers.length - 1 - layerIdx) * (NODE_W + LAYER_GAP) + NODE_W / 2
+          : layerIdx * (NODE_W + LAYER_GAP) + NODE_W / 2;
+        const y = startY + i * (NODE_H + NODE_GAP) + NODE_H / 2;
+        nodePositions.set(id, { x, y });
       }
     }
   }
 
-  // Place nodes on concentric circles
-  const layerNodes = new Map<number, string[]>();
-  nodes.forEach((n) => {
-    const l = layers.get(n.id) || 0;
-    if (!layerNodes.has(l)) layerNodes.set(l, []);
-    layerNodes.get(l)!.push(n.id);
-  });
-
-  const layerGap = LAYER_GAP + NODE_H;
-  const nodeGap = NODE_W + NODE_GAP;
-
-  layerNodes.forEach((ids, layer) => {
-    const radius = layer * layerGap + 100;
-    ids.forEach((id, i) => {
-      const angle = (i / ids.length) * 2 * Math.PI - Math.PI / 2;
-      const node = nodes.find((n) => n.id === id)!;
-      node.x = Math.cos(angle) * radius;
-      node.y = Math.sin(angle) * radius;
-    });
-  });
-
-  // Run force to clean up
-  const sim = d3.forceSimulation(nodes as any)
-    .force("link", d3.forceLink(links as any).id((d: any) => d.id).distance(80).strength(0.3))
-    .force("charge", d3.forceManyBody().strength(-200))
-    .force("center", d3.forceCenter(0, 0).strength(0.05))
-    .force("collision", d3.forceCollide().radius(50))
-    .alphaDecay(0.05)
-    .stop();
-
-  sim.tick(150);
-
-  return buildResult(nodes, links, parsed.edges);
-}
-
-// ──────────────────────────── Circular Layout ────────────────────────────────
-
-function layoutCircular(parsed: ParsedGraph): LayoutResult {
-  const nodes = Array.from(parsed.nodes.entries()).map(([id, label]) => ({ id, label, x: 0, y: 0 }));
-  const links = parsed.edges.map((e) => ({ source: e.source, target: e.target }));
-
-  const n = nodes.length;
-  const radius = Math.max(n * (NODE_W + NODE_GAP) / (2 * Math.PI), 150);
-
-  nodes.forEach((node, i) => {
-    const angle = (i / n) * 2 * Math.PI - Math.PI / 2;
-    node.x = Math.cos(angle) * radius;
-    node.y = Math.sin(angle) * radius;
-  });
-
-  // Light force to reduce crossings
-  const sim = d3.forceSimulation(nodes as any)
-    .force("link", d3.forceLink(links as any).id((d: any) => d.id).distance(100).strength(0.2))
-    .force("charge", d3.forceManyBody().strength(-150))
-    .force("center", d3.forceCenter(0, 0).strength(0.03))
-    .force("collision", d3.forceCollide().radius(50))
-    .alphaDecay(0.08)
-    .stop();
-
-  sim.tick(100);
-
-  return buildResult(nodes, links, parsed.edges);
-}
-
-// ──────────────────────────── Orthogonal Layout ──────────────────────────────
-
-function layoutOrthogonal(parsed: ParsedGraph, direction: string): LayoutResult {
-  const nodeList = Array.from(parsed.nodes.entries()).map(([id, label]) => ({ id, label }));
-  const dag = graphDag(nodeList, detectAndBreakCycles(nodeList, parsed.edges));
-  const isVertical = direction === "TB" || direction === "BT";
-
-  sugiyama()
-    .nodeSize(() => [NODE_W + NODE_GAP * 2, NODE_H + LAYER_GAP * 1.5])
-    .decross(decrossOpt())
-    .coord(coordVert())
-    (dag);
-
-  // After sugiyama, snap positions to grid
-  const gridSize = NODE_W + NODE_GAP;
-  const gridY = NODE_H + LAYER_GAP;
-
-  for (const node of dag.descendants()) {
-    node.x = Math.round(node.x! / gridSize) * gridSize;
-    node.y = Math.round(node.y! / gridY) * gridY;
-  }
-
-  const result = extractDAGLayout(dag, parsed.nodes, parsed.edges, isVertical);
-
-  // Add orthogonal edge routing (right angles)
-  for (const edge of result.edges) {
-    if (edge.points.length === 2) {
-      const [start, end] = edge.points;
-      edge.points = [
-        start,
-        { x: end.x, y: start.y }, // horizontal then vertical
-        end,
-      ];
+  // Algorithm-specific adjustments
+  switch (algorithm) {
+    case "circular":
+    case "elk-radial": {
+      // Place nodes in concentric circles based on layer
+      const nodeIds = Array.from(nodes.keys());
+      const centerX = 0;
+      const centerY = 0;
+      nodeIds.forEach((id, i) => {
+        const angle = (i / nodeIds.length) * 2 * Math.PI - Math.PI / 2;
+        const radius = 200 + Math.floor(i / 8) * 150;
+        nodePositions.set(id, {
+          x: centerX + Math.cos(angle) * radius,
+          y: centerY + Math.sin(angle) * radius,
+        });
+      });
+      break;
     }
-  }
-
-  return result;
-}
-
-// ──────────────────────────── Balloon Layout ─────────────────────────────────
-
-function layoutBalloon(parsed: ParsedGraph): LayoutResult {
-  const nodeList = Array.from(parsed.nodes.entries()).map(([id, label]) => ({ id, label }));
-  const dag = graphDag(nodeList, detectAndBreakCycles(nodeList, parsed.edges));
-
-  // Build adjacency for tree structure
-  const children = new Map<string, string[]>();
-  dag.descendants().forEach((n) => children.set(n.data.id || n.data.label, []));
-
-  for (const link of dag.links()) {
-    const srcId = (link.source as any).data?.id || (link.source as any).data?.label;
-    const tgtId = (link.target as any).data?.id || (link.target as any).data?.label;
-    if (srcId && tgtId) children.get(srcId)?.push(tgtId);
-  }
-
-  const nodes: { id: string; label: string; x: number; y: number }[] = [];
-  const root = dag.descendants()[0];
-  if (!root) return { nodes: [], edges: [], width: 400, height: 300 };
-
-  const rootId = root.data.id || root.data.label;
-  const rootLabel = root.data.label || root.data.id;
-  nodes.push({ id: rootId, label: rootLabel, x: 0, y: 0 });
-
-  // Place subtrees radially
-  const childIds = children.get(rootId) || [];
-  const angleStep = (2 * Math.PI) / childIds.length;
-  const subtreeRadius = 200;
-
-  childIds.forEach((childId, i) => {
-    const angle = i * angleStep - Math.PI / 2;
-    const cx = Math.cos(angle) * subtreeRadius;
-    const cy = Math.sin(angle) * subtreeRadius;
-
-    const childNode = dag.descendants().find((n) => (n.data.id || n.data.label) === childId);
-    if (childNode) {
-      nodes.push({
-        id: childId,
-        label: childNode.data.label || childId,
-        x: cx,
-        y: cy,
-      });
-
-      // Place grandchildren radially around parent
-      const grandchildren = children.get(childId) || [];
-      grandchildren.forEach((gcId, j) => {
-        const ga = angle + (j - (grandchildren.length - 1) / 2) * 0.4;
-        const gr = 120;
-        const gcx = cx + Math.cos(ga) * gr;
-        const gcy = cy + Math.sin(ga) * gr;
-        const gcNode = dag.descendants().find((n) => (n.data.id || n.data.label) === gcId);
-        if (gcNode) {
-          nodes.push({ id: gcId, label: gcNode.data.label || gcId, x: gcx, y: gcy });
-        }
-      });
-    }
-  });
-
-  const links = parsed.edges.map((e) => ({ source: e.source, target: e.target }));
-  return buildResult(nodes, links, parsed.edges);
-}
-
-// ──────────────────────────── Bus Routing ─────────────────────────────────────
-
-function layoutBus(parsed: ParsedGraph, direction: string): LayoutResult {
-  const nodeList = Array.from(parsed.nodes.entries()).map(([id, label]) => ({ id, label }));
-  const isVertical = direction === "TB" || direction === "BT";
-
-  const nodes: { id: string; label: string; x: number; y: number }[] = [];
-  const busOffset = isVertical ? 0 : 0;
-
-  nodeList.forEach((n, i) => {
-    const side = i % 2 === 0 ? -1 : 1;
-    if (isVertical) {
-      nodes.push({
-        id: n.id,
-        label: n.label,
-        x: side * (NODE_W / 2 + NODE_GAP + 20),
-        y: i * (NODE_H + 20),  // Tight: only 20px gap between nodes
-      });
-    } else {
-      nodes.push({
-        id: n.id,
-        label: n.label,
-        x: i * (NODE_W + LAYER_GAP),
-        y: side * (NODE_H / 2 + NODE_GAP + 20),
-      });
-    }
-  });
-
-  const links = parsed.edges.map((e) => ({ source: e.source, target: e.target }));
-  const result = buildResult(nodes, links, parsed.edges);
-
-  // Route edges through central bus
-  for (const edge of result.edges) {
-    if (edge.points.length === 2) {
-      const [start, end] = edge.points;
+    case "bus": {
+      // Nodes alternate sides of a central vertical bus line
+      const nodeIds = Array.from(nodes.keys());
       const busX = 0;
-      const busY = 0;
-      edge.points = [
-        start,
-        { x: isVertical ? busX : end.x, y: isVertical ? start.y : busY },
-        { x: isVertical ? busX : end.x, y: isVertical ? end.y : busY },
-        end,
-      ];
+      nodeIds.forEach((id, i) => {
+        const side = i % 2 === 0 ? -1 : 1;
+        nodePositions.set(id, {
+          x: busX + side * (NODE_W / 2 + 30),
+          y: i * (NODE_H + 25) + NODE_H / 2,
+        });
+      });
+      break;
     }
   }
 
-  return result;
-}
+  // Run a few force iterations to reduce crossings and improve spacing
+  const forceNodes = Array.from(nodePositions.entries()).map(([id, pos]) => ({
+    id,
+    x: pos.x,
+    y: pos.y,
+  }));
 
-// ──────────────────────────── Edge Router ─────────────────────────────────────
+  const forceLinks = edges
+    .filter((e) => nodePositions.has(e.source) && nodePositions.has(e.target))
+    .map((e) => ({ source: e.source, target: e.target }));
 
-function layoutEdgeRouter(parsed: ParsedGraph, direction: string): LayoutResult {
-  // First get a base layout, then re-route edges orthogonally
-  const base = layoutHierarchic(parsed, direction);
+  if (forceNodes.length > 0) {
+    const sim = d3.forceSimulation(forceNodes as any)
+      .force("link", d3.forceLink(forceLinks as any).id((d: any) => d.id).distance(120).strength(0.3))
+      .force("charge", d3.forceManyBody().strength(-200))
+      .force("collision", d3.forceCollide().radius(60))
+      .alphaDecay(0.1)
+      .stop();
 
-  for (const edge of base.edges) {
-    if (edge.points.length === 2) {
-      const [start, end] = edge.points;
-      // Route: horizontal then vertical (L-shape)
-      edge.points = [
-        start,
-        { x: end.x, y: start.y },
-        end,
-      ];
+    sim.tick(80);
+
+    // Update positions
+    for (const fn of forceNodes) {
+      nodePositions.set(fn.id, { x: fn.x, y: fn.y });
     }
   }
 
-  return base;
-}
-
-// ──────────────────────────── Helpers ────────────────────────────────────────
-
-function extractDAGLayout(
-  dag: any,
-  nodeMap: Map<string, string>,
-  edgeList: { source: string; target: string; label?: string }[],
-  _isVertical: boolean
-): LayoutResult {
-  // Collect node positions from DAG (use ID-based lookup)
-  const nodePositions = new Map<string, { x: number; y: number }>();
-  for (const node of dag.descendants()) {
-    const id = node.data.id || node.data.label;
-    if (id && node.x !== undefined && node.y !== undefined) {
-      nodePositions.set(id, { x: node.x, y: node.y });
-    }
+  // Normalize: shift all positions so min is at PADDING
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const [, pos] of nodePositions) {
+    minX = Math.min(minX, pos.x);
+    minY = Math.min(minY, pos.y);
+    maxX = Math.max(maxX, pos.x);
+    maxY = Math.max(maxY, pos.y);
   }
 
-  const nodes: LayoutNode[] = [];
+  const shiftX = PADDING - minX + NODE_W / 2;
+  const shiftY = PADDING - minY + NODE_H / 2;
+
   for (const [id, pos] of nodePositions) {
-    nodes.push({ id, label: nodeMap.get(id) || id, x: pos.x, y: pos.y });
+    nodePositions.set(id, { x: pos.x + shiftX, y: pos.y + shiftY });
   }
 
-  // Build edges from original edge list using ID lookup (preserves correct direction)
-  const edges: LayoutEdge[] = [];
-  for (const e of edgeList) {
+  // Build result
+  const resultNodes: LayoutNode[] = [];
+  for (const [id, pos] of nodePositions) {
+    resultNodes.push({ id, label: nodes.get(id) || id, x: pos.x, y: pos.y });
+  }
+
+  const resultEdges: LayoutEdge[] = [];
+  for (const e of edges) {
     const src = nodePositions.get(e.source);
     const tgt = nodePositions.get(e.target);
     if (!src || !tgt) continue;
-    edges.push({
+    resultEdges.push({
       points: [{ x: src.x, y: src.y }, { x: tgt.x, y: tgt.y }],
       label: e.label,
     });
   }
 
-  // Normalize positions: translate to origin and scale to fit reasonable viewport
-  if (nodes.length === 0) return { nodes: [], edges: [], width: 400, height: 300 };
-
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-  for (const n of nodes) {
-    minX = Math.min(minX, n.x);
-    minY = Math.min(minY, n.y);
-    maxX = Math.max(maxX, n.x);
-    maxY = Math.max(maxY, n.y);
-  }
-
-  const rawW = maxX - minX || 1;
-  const rawH = maxY - minY || 1;
-
-  // Target reasonable viewport size
-  const targetW = Math.max(rawW, 600);
-  const targetH = Math.max(rawH, 400);
-
-  // Shift all nodes so minX,minY = 0
-  for (const n of nodes) {
-    n.x -= minX;
-    n.y -= minY;
-  }
-
-  // Shift edges too
-  for (const e of edges) {
-    for (const p of e.points) {
-      p.x -= minX;
-      p.y -= minY;
-    }
-  }
-
-  return {
-    nodes,
-    edges,
-    width: targetW + PADDING * 2,
-    height: targetH + PADDING * 2,
-  };
-}
-
-function buildResult(
-  nodes: { id: string; label: string; x: number; y: number }[],
-  links: { source: string; target: string }[],
-  edgeList: { source: string; target: string; label?: string }[]
-): LayoutResult {
-  const edges: LayoutEdge[] = links.map((l, i) => {
-    const src = nodes.find((n) => n.id === l.source);
-    const tgt = nodes.find((n) => n.id === l.target);
-    return {
-      points: src && tgt
-        ? [{ x: src.x, y: src.y }, { x: tgt.x, y: tgt.y }]
-        : [{ x: 0, y: 0 }, { x: 0, y: 0 }],
-      label: edgeList[i]?.label,
-    };
-  });
-
-  return buildResultFromNodes(nodes, edges);
-}
-
-function buildResultFromNodes(nodes: LayoutNode[], edges: LayoutEdge[]): LayoutResult {
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-  for (const n of nodes) {
+  // Recalculate bounds after shifting
+  minX = Infinity; minY = Infinity; maxX = -Infinity; maxY = -Infinity;
+  for (const n of resultNodes) {
     minX = Math.min(minX, n.x - NODE_W / 2);
     minY = Math.min(minY, n.y - NODE_H / 2);
     maxX = Math.max(maxX, n.x + NODE_W / 2);
@@ -555,8 +289,8 @@ function buildResultFromNodes(nodes: LayoutNode[], edges: LayoutEdge[]): LayoutR
   }
 
   return {
-    nodes,
-    edges,
+    nodes: resultNodes,
+    edges: resultEdges,
     width: maxX - minX + PADDING * 2,
     height: maxY - minY + PADDING * 2,
   };
@@ -568,17 +302,16 @@ function escapeXml(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
 }
 
-function renderMultilineText(cx: number, cy: number, text: string, fontSize: number, fill: string, attrs: string): string {
-  // Split on <br> or \n and render each line
+function renderMultilineText(cx: number, cy: number, text: string, fontSize: number, fill: string): string {
   const lines = text.split(/<br\s*\/?>|\n/).filter(Boolean);
   if (lines.length <= 1) {
-    return `<text x="${cx}" y="${cy + fontSize * 0.35}" fill="${fill}" font-size="${fontSize}" text-anchor="middle" dominant-baseline="middle" pointer-events="none" ${attrs}>${escapeXml(text)}</text>`;
+    return `<text x="${cx}" y="${cy + fontSize * 0.35}" fill="${fill}" font-size="${fontSize}" text-anchor="middle" dominant-baseline="middle" pointer-events="none">${escapeXml(text)}</text>`;
   }
   const lineH = fontSize * 1.3;
   const totalH = lines.length * lineH;
   const startY = cy - totalH / 2 + lineH / 2;
   return lines.map((line, i) =>
-    `<text x="${cx}" y="${startY + i * lineH + fontSize * 0.35}" fill="${fill}" font-size="${fontSize}" text-anchor="middle" pointer-events="none" ${attrs}>${escapeXml(line)}</text>`
+    `<text x="${cx}" y="${startY + i * lineH + fontSize * 0.35}" fill="${fill}" font-size="${fontSize}" text-anchor="middle" pointer-events="none">${escapeXml(line)}</text>`
   ).join("");
 }
 
@@ -592,15 +325,6 @@ export function renderSVG(result: LayoutResult, theme: string = "dark"): string 
   const labelBg = isDark ? "#0f172a" : "#f1f5f9";
   const bgFill = isDark ? "#0d1117" : "#fafbfc";
 
-  // Compute viewBox offset
-  let minX = Infinity, minY = Infinity;
-  for (const n of nodes) {
-    minX = Math.min(minX, n.x - NODE_W / 2);
-    minY = Math.min(minY, n.y - NODE_H / 2);
-  }
-  const ox = PADDING - minX;
-  const oy = PADDING - minY;
-
   let svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="100%" height="100%" font-family="'JetBrains Mono', 'Fira Code', monospace">`;
   svg += `<rect width="${width}" height="${height}" fill="${bgFill}" />`;
   svg += `<defs>
@@ -609,72 +333,25 @@ export function renderSVG(result: LayoutResult, theme: string = "dark"): string 
     </marker>
   </defs>`;
 
-  // Edges
+  // Edges first
   for (const e of edges) {
-    const pts = e.points.map((p) => `${p.x + ox},${p.y + oy}`).join(" ");
+    const pts = e.points.map((p) => `${p.x},${p.y}`).join(" ");
     svg += `<polyline points="${pts}" fill="none" stroke="${edgeColor}" stroke-width="1.5" marker-end="url(#ah)" />`;
     if (e.label) {
       const mid = e.points[Math.floor(e.points.length / 2)];
-      const mx = mid.x + ox;
-      const my = mid.y + oy;
-      svg += `<rect x="${mx - 20}" y="${my - 8}" width="40" height="14" fill="${labelBg}" rx="3" opacity="0.9" />`;
-      svg += `<text x="${mx}" y="${my + 2}" fill="${textColor}" font-size="9" text-anchor="middle">${escapeXml(e.label)}</text>`;
+      svg += `<rect x="${mid.x - 20}" y="${mid.y - 8}" width="40" height="14" fill="${labelBg}" rx="3" opacity="0.9" />`;
+      svg += `<text x="${mid.x}" y="${mid.y + 2}" fill="${textColor}" font-size="9" text-anchor="middle">${escapeXml(e.label)}</text>`;
     }
   }
 
-  // Nodes (text is SIBLING of rect, never child)
-  const r = 6;
+  // Nodes (text is SIBLING of rect)
   for (const n of nodes) {
-    const x = n.x + ox - NODE_W / 2;
-    const y = n.y + oy - NODE_H / 2;
-    svg += `<rect x="${x}" y="${y}" width="${NODE_W}" height="${NODE_H}" rx="${r}" fill="${nodeFill}" stroke="${nodeStroke}" stroke-width="1.5" />`;
-    svg += renderMultilineText(n.x + ox, n.y + oy + 1, n.label, 11, textColor, '');
+    const x = n.x - NODE_W / 2;
+    const y = n.y - NODE_H / 2;
+    svg += `<rect x="${x}" y="${y}" width="${NODE_W}" height="${NODE_H}" rx="6" fill="${nodeFill}" stroke="${nodeStroke}" stroke-width="1.5" />`;
+    svg += renderMultilineText(n.x, n.y, n.label, 11, textColor);
   }
 
   svg += "</svg>";
   return svg;
-}
-
-// ──────────────────────────── Main Entry ─────────────────────────────────────
-
-export function computeLayout(
-  code: string,
-  algorithm: string,
-  direction: string
-): LayoutResult {
-  const parsed = parseGraph(code);
-  if (parsed.nodes.size === 0) return { nodes: [], edges: [], width: 400, height: 300 };
-
-  const tryLayout = (fn: () => LayoutResult): LayoutResult => {
-    try { return fn(); }
-    catch (err) {
-      console.warn("[Layout] Layout failed, falling back to organic:", err);
-      return layoutOrganic(parsed);
-    }
-  };
-
-  switch (algorithm) {
-    case "hierarchical":
-    case "elk-layered":
-      return tryLayout(() => layoutHierarchic(parsed, direction));
-    case "tree":
-    case "elk-mrtree":
-      return tryLayout(() => layoutTree(parsed, direction));
-    case "force":
-    case "elk-force":
-      return layoutOrganic(parsed);
-    case "circular":
-    case "elk-radial":
-      return algorithm === "circular" ? layoutCircular(parsed) : layoutRadial(parsed);
-    case "orthogonal":
-      return tryLayout(() => layoutOrthogonal(parsed, direction));
-    case "bus":
-      return layoutBus(parsed, direction);
-    case "balloon":
-      return tryLayout(() => layoutBalloon(parsed));
-    case "edgeRouter":
-      return tryLayout(() => layoutEdgeRouter(parsed, direction));
-    default:
-      return tryLayout(() => layoutHierarchic(parsed, direction));
-  }
 }
