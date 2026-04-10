@@ -1,28 +1,16 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Use different output dir ONLY for local production builds
-  output: process.env.NODE_ENV === 'production' ? 'standalone' : 'export',
-  distDir: process.env.NODE_ENV === 'production'
-    ? (process.env.BUILD_DIR || '.next-build')
-    : '.next',
-  // Enable CORS for Design Mode to load resources cross-origin (dev only)
-  // Note: Do NOT set allowedDevOrigins - the default allows all origins in dev mode
-  async headers() {
-    // Only add permissive CORS headers in development
-    if (process.env.NODE_ENV !== 'development') {
-      return [];
-    }
-    return [
-      {
-        source: '/:path*',
-        headers: [
-          { key: 'Access-Control-Allow-Origin', value: '*' },
-          { key: 'Access-Control-Allow-Methods', value: 'GET, POST, PUT, DELETE, OPTIONS' },
-          { key: 'Access-Control-Allow-Headers', value: '*' },
-        ],
-      },
-    ];
-  },
+  // GitHub Pages requires basePath matching the repo name
+  basePath: '/uglystick',
+  
+  // Always use static export for GitHub Pages deployment
+  output: 'export',
+  distDir: process.env.BUILD_DIR || '../docs',
+  
+  // GitHub Pages requires trailing slashes for proper routing
+  trailingSlash: true,
+  
+  // Disable image optimization for static export
   images: {
     unoptimized: true,
     domains: [
