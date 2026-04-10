@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // Use different output dir ONLY for local production builds
-  output: 'standalone',
+  output: process.env.NODE_ENV === 'production' ? 'standalone' : 'export',
   distDir: process.env.NODE_ENV === 'production'
     ? (process.env.BUILD_DIR || '.next-build')
     : '.next',
@@ -45,11 +45,6 @@ const nextConfig = {
       {
         protocol: "https",
         hostname: "ext.same-assets.com",
-        pathname: "/**",
-      },
-      {
-        protocol: "https",
-        hostname: "ugc.same-assets.com",
         pathname: "/**",
       },
     ],
