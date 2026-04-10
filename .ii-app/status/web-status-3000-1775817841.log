@@ -1,0 +1,224 @@
+  57 | const LAYOUT_ICONS: Record<string, React.ReactNode> = {
+  58 |   hierarchical: <Layers className="w-3.5 h-3.5" />,
+
+Import map: aliased to relative './src/components/ui/tooltip' inside of [project
+]/
+
+
+Import traces:
+  Client Component Browser:
+    ./src/components/graphique/Toolbar.tsx [Client Component Browser]
+    ./src/components/graphique/GraphiqueApp.tsx [Client Component Browser]
+    ./src/components/graphique/GraphiqueApp.tsx [Server Component]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/graphique/Toolbar.tsx [Client Component SSR]
+    ./src/components/graphique/GraphiqueApp.tsx [Client Component SSR]
+    ./src/components/graphique/GraphiqueApp.tsx [Server Component]
+    ./src/app/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+ ⨯ ./src/components/graphique/Toolbar.tsx:50:1
+Module not found: Can't resolve '@/components/ui/tooltip'
+  48 |   DropdownMenuTrigger,
+  49 | } from "@/components/ui/dropdown-menu";
+> 50 | import {
+     | ^^^^^^^^
+> 51 |   Tooltip,
+     | ^^^^^^^^^^
+> 52 |   TooltipContent,
+     | ^^^^^^^^^^
+> 53 |   TooltipProvider,
+     | ^^^^^^^^^^
+> 54 |   TooltipTrigger,
+     | ^^^^^^^^^^
+> 55 | } from "@/components/ui/tooltip";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  56 |
+  57 | const LAYOUT_ICONS: Record<string, React.ReactNode> = {
+  58 |   hierarchical: <Layers className="w-3.5 h-3.5" />,
+
+Import map: aliased to relative './src/components/ui/tooltip' inside of [project
+]/
+
+
+Import traces:
+  Client Component Browser:
+    ./src/components/graphique/Toolbar.tsx [Client Component Browser]
+    ./src/components/graphique/GraphiqueApp.tsx [Client Component Browser]
+    ./src/components/graphique/GraphiqueApp.tsx [Server Component]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/graphique/Toolbar.tsx [Client Component SSR]
+    ./src/components/graphique/GraphiqueApp.tsx [Client Component SSR]
+    ./src/components/graphique/GraphiqueApp.tsx [Server Component]
+    ./src/app/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+ ⨯ ./src/components/graphique/Toolbar.tsx:50:1
+Module not found: Can't resolve '@/components/ui/tooltip'
+  48 |   DropdownMenuTrigger,
+  49 | } from "@/components/ui/dropdown-menu";
+> 50 | import {
+     | ^^^^^^^^
+> 51 |   Tooltip,
+     | ^^^^^^^^^^
+> 52 |   TooltipContent,
+     | ^^^^^^^^^^
+> 53 |   TooltipProvider,
+     | ^^^^^^^^^^
+> 54 |   TooltipTrigger,
+     | ^^^^^^^^^^
+> 55 | } from "@/components/ui/tooltip";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  56 |
+  57 | const LAYOUT_ICONS: Record<string, React.ReactNode> = {
+  58 |   hierarchical: <Layers className="w-3.5 h-3.5" />,
+
+Import map: aliased to relative './src/components/ui/tooltip' inside of [project
+]/
+
+
+Import traces:
+  Client Component Browser:
+    ./src/components/graphique/Toolbar.tsx [Client Component Browser]
+    ./src/components/graphique/GraphiqueApp.tsx [Client Component Browser]
+    ./src/components/graphique/GraphiqueApp.tsx [Server Component]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/graphique/Toolbar.tsx [Client Component SSR]
+    ./src/components/graphique/GraphiqueApp.tsx [Client Component SSR]
+    ./src/components/graphique/GraphiqueApp.tsx [Server Component]
+    ./src/app/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+ ⨯ ./src/components/graphique/Toolbar.tsx:50:1
+Module not found: Can't resolve '@/components/ui/tooltip'
+  48 |   DropdownMenuTrigger,
+  49 | } from "@/components/ui/dropdown-menu";
+> 50 | import {
+     | ^^^^^^^^
+> 51 |   Tooltip,
+     | ^^^^^^^^^^
+> 52 |   TooltipContent,
+     | ^^^^^^^^^^
+> 53 |   TooltipProvider,
+     | ^^^^^^^^^^
+> 54 |   TooltipTrigger,
+     | ^^^^^^^^^^
+> 55 | } from "@/components/ui/tooltip";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  56 |
+  57 | const LAYOUT_ICONS: Record<string, React.ReactNode> = {
+  58 |   hierarchical: <Layers className="w-3.5 h-3.5" />,
+
+Import map: aliased to relative './src/components/ui/tooltip' inside of [project
+]/
+
+
+Import traces:
+  Client Component Browser:
+    ./src/components/graphique/Toolbar.tsx [Client Component Browser]
+    ./src/components/graphique/GraphiqueApp.tsx [Client Component Browser]
+    ./src/components/graphique/GraphiqueApp.tsx [Server Component]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/graphique/Toolbar.tsx [Client Component SSR]
+    ./src/components/graphique/GraphiqueApp.tsx [Client Component SSR]
+    ./src/components/graphique/GraphiqueApp.tsx [Server Component]
+    ./src/app/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+ ⨯ ./src/components/graphique/Toolbar.tsx:50:1
+Module not found: Can't resolve '@/components/ui/tooltip'
+  48 |   DropdownMenuTrigger,
+  49 | } from "@/components/ui/dropdown-menu";
+> 50 | import {
+     | ^^^^^^^^
+> 51 |   Tooltip,
+     | ^^^^^^^^^^
+> 52 |   TooltipContent,
+     | ^^^^^^^^^^
+> 53 |   TooltipProvider,
+     | ^^^^^^^^^^
+> 54 |   TooltipTrigger,
+     | ^^^^^^^^^^
+> 55 | } from "@/components/ui/tooltip";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  56 |
+  57 | const LAYOUT_ICONS: Record<string, React.ReactNode> = {
+  58 |   hierarchical: <Layers className="w-3.5 h-3.5" />,
+
+Import map: aliased to relative './src/components/ui/tooltip' inside of [project
+]/
+
+
+Import traces:
+  Client Component Browser:
+    ./src/components/graphique/Toolbar.tsx [Client Component Browser]
+    ./src/components/graphique/GraphiqueApp.tsx [Client Component Browser]
+    ./src/components/graphique/GraphiqueApp.tsx [Server Component]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/graphique/Toolbar.tsx [Client Component SSR]
+    ./src/components/graphique/GraphiqueApp.tsx [Client Component SSR]
+    ./src/components/graphique/GraphiqueApp.tsx [Server Component]
+    ./src/app/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+ ⨯ ./src/components/graphique/Toolbar.tsx:50:1
+Module not found: Can't resolve '@/components/ui/tooltip'
+  48 |   DropdownMenuTrigger,
+  49 | } from "@/components/ui/dropdown-menu";
+> 50 | import {
+     | ^^^^^^^^
+> 51 |   Tooltip,
+     | ^^^^^^^^^^
+> 52 |   TooltipContent,
+     | ^^^^^^^^^^
+> 53 |   TooltipProvider,
+     | ^^^^^^^^^^
+> 54 |   TooltipTrigger,
+     | ^^^^^^^^^^
+> 55 | } from "@/components/ui/tooltip";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  56 |
+  57 | const LAYOUT_ICONS: Record<string, React.ReactNode> = {
+  58 |   hierarchical: <Layers className="w-3.5 h-3.5" />,
+
+Import map: aliased to relative './src/components/ui/tooltip' inside of [project
+]/
+
+
+Import traces:
+  Client Component Browser:
+    ./src/components/graphique/Toolbar.tsx [Client Component Browser]
+    ./src/components/graphique/GraphiqueApp.tsx [Client Component Browser]
+    ./src/components/graphique/GraphiqueApp.tsx [Server Component]
+    ./src/app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/graphique/Toolbar.tsx [Client Component SSR]
+    ./src/components/graphique/GraphiqueApp.tsx [Client Component SSR]
+    ./src/components/graphique/GraphiqueApp.tsx [Server Component]
+    ./src/app/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+

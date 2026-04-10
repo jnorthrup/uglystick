@@ -1,0 +1,24 @@
+-bash-5.2$ export HOME='/home/user' BUN_INSTALL='/home/user/.bun' PATH='/home/us
+er/.bun/bin:/app/ii_sandbox/.venv/bin:/usr/local/bin:/usr/bin:/bin:/usr/local/ga
+mes:/usr/games'; cd '/workspace/graphique-2026' && PORT=3000 bun run dev
+$ next dev -H 0.0.0.0 --turbopack
+   ▲ Next.js 15.5.13 (Turbopack)
+   - Local:        http://localhost:3000
+   - Network:      http://0.0.0.0:3000
+
+ ✓ Starting...
+ ✓ Ready in 1022ms
+ ○ Compiling / ...
+ ✓ Compiled / in 7.7s
+ GET / 200 in 8135ms
+
+
+
+
+
+
+
+
+
+
+

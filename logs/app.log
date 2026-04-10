@@ -1,0 +1,180 @@
+2026-03-31 16:46:09,480 | INFO | mcp.server.streamable_http_manager | - | StreamableHTTP session manager started
+2026-04-10 10:32:03,872 | INFO | mcp.server.streamable_http_manager | - | Created new transport with session ID: b21ab79252bb43f69bcd0392ec76903b
+2026-04-10 10:32:04,766 | INFO | httpx | - | HTTP Request: GET http://0.0.0.0:1324/health "HTTP/1.1 200 OK"
+2026-04-10 10:32:04,877 | INFO | mcp.server.streamable_http | - | Terminating session: b21ab79252bb43f69bcd0392ec76903b
+2026-04-10 10:32:27,815 | INFO | mcp.server.streamable_http_manager | - | Created new transport with session ID: 6df18edcfd4945fca5266836475906cf
+2026-04-10 10:32:27,994 | INFO | mcp.server.lowlevel.server | - | Processing request of type CallToolRequest
+2026-04-10 10:32:42,196 | INFO | mcp.server.lowlevel.server | - | Processing request of type ListToolsRequest
+2026-04-10 10:32:42,272 | INFO | mcp.server.streamable_http | - | Terminating session: 6df18edcfd4945fca5266836475906cf
+2026-04-10 10:32:55,140 | INFO | mcp.server.streamable_http_manager | - | Created new transport with session ID: 26a11d0181bc4afca00a0b7c7d99c9ec
+2026-04-10 10:32:55,267 | INFO | mcp.server.lowlevel.server | - | Processing request of type CallToolRequest
+2026-04-10 10:32:55,339 | INFO | mcp.server.lowlevel.server | - | Processing request of type ListToolsRequest
+2026-04-10 10:32:55,408 | INFO | mcp.server.streamable_http | - | Terminating session: 26a11d0181bc4afca00a0b7c7d99c9ec
+2026-04-10 10:33:05,494 | INFO | mcp.server.streamable_http_manager | - | Created new transport with session ID: b4367f05ba664fc68e0f37dc4ef42613
+2026-04-10 10:33:05,620 | INFO | mcp.server.lowlevel.server | - | Processing request of type CallToolRequest
+2026-04-10 10:33:05,828 | INFO | mcp.server.lowlevel.server | - | Processing request of type ListToolsRequest
+2026-04-10 10:33:05,900 | INFO | mcp.server.streamable_http | - | Terminating session: b4367f05ba664fc68e0f37dc4ef42613
+2026-04-10 10:33:14,764 | INFO | mcp.server.streamable_http_manager | - | Created new transport with session ID: 96380e4f1bc0476586be8528f9ac6f82
+2026-04-10 10:33:14,885 | INFO | mcp.server.lowlevel.server | - | Processing request of type CallToolRequest
+2026-04-10 10:33:14,950 | INFO | mcp.server.lowlevel.server | - | Processing request of type ListToolsRequest
+2026-04-10 10:33:15,015 | INFO | mcp.server.streamable_http | - | Terminating session: 96380e4f1bc0476586be8528f9ac6f82
+2026-04-10 10:33:47,029 | INFO | mcp.server.streamable_http_manager | - | Created new transport with session ID: c8c5c1367985485e9d94baf2a171468c
+2026-04-10 10:33:47,147 | INFO | mcp.server.lowlevel.server | - | Processing request of type CallToolRequest
+2026-04-10 10:33:47,219 | INFO | mcp.server.lowlevel.server | - | Processing request of type ListToolsRequest
+2026-04-10 10:33:47,384 | INFO | mcp.server.streamable_http | - | Terminating session: c8c5c1367985485e9d94baf2a171468c
+2026-04-10 10:33:49,824 | INFO | mcp.server.streamable_http_manager | - | Created new transport with session ID: 5ffc89b97e36475eb4287de083cdae49
+2026-04-10 10:33:50,050 | INFO | mcp.server.lowlevel.server | - | Processing request of type CallToolRequest
+2026-04-10 10:33:50,112 | INFO | mcp.server.lowlevel.server | - | Processing request of type ListToolsRequest
+2026-04-10 10:33:50,281 | INFO | mcp.server.streamable_http | - | Terminating session: 5ffc89b97e36475eb4287de083cdae49
+2026-04-10 10:33:53,682 | INFO | mcp.server.streamable_http_manager | - | Created new transport with session ID: 3003727b8cb54e0288703604223abe4f
+2026-04-10 10:33:53,931 | INFO | mcp.server.lowlevel.server | - | Processing request of type CallToolRequest
+2026-04-10 10:33:53,934 | INFO | mcp.server.lowlevel.server | - | Processing request of type CallToolRequest
+2026-04-10 10:33:53,937 | INFO | mcp.server.lowlevel.server | - | Processing request of type CallToolRequest
+2026-04-10 10:33:54,054 | INFO | mcp.server.lowlevel.server | - | Processing request of type ListToolsRequest
+2026-04-10 10:33:54,056 | INFO | mcp.server.lowlevel.server | - | Processing request of type ListToolsRequest
+2026-04-10 10:33:54,192 | INFO | mcp.server.lowlevel.server | - | Processing request of type ListToolsRequest
+2026-04-10 10:33:54,262 | INFO | mcp.server.streamable_http | - | Terminating session: 3003727b8cb54e0288703604223abe4f
+2026-04-10 10:34:53,843 | INFO | mcp.server.streamable_http_manager | - | Created new transport with session ID: 1d6c0bc041ad4b14b5ee7ee1384e99bb
+2026-04-10 10:34:53,970 | INFO | mcp.server.lowlevel.server | - | Processing request of type CallToolRequest
+2026-04-10 10:34:54,044 | INFO | mcp.server.lowlevel.server | - | Processing request of type ListToolsRequest
+2026-04-10 10:34:54,106 | INFO | mcp.server.streamable_http | - | Terminating session: 1d6c0bc041ad4b14b5ee7ee1384e99bb
+2026-04-10 10:35:33,657 | INFO | mcp.server.streamable_http_manager | - | Created new transport with session ID: e2e527f5a81f437a8c2148d1c6cc6064
+2026-04-10 10:35:33,785 | INFO | mcp.server.lowlevel.server | - | Processing request of type CallToolRequest
+2026-04-10 10:35:33,854 | INFO | mcp.server.lowlevel.server | - | Processing request of type ListToolsRequest
+2026-04-10 10:35:33,918 | INFO | mcp.server.streamable_http | - | Terminating session: e2e527f5a81f437a8c2148d1c6cc6064
+2026-04-10 10:35:57,029 | INFO | mcp.server.streamable_http_manager | - | Created new transport with session ID: 5440a263a5964efc91a8e23e65f6c293
+2026-04-10 10:35:57,153 | INFO | mcp.server.lowlevel.server | - | Processing request of type CallToolRequest
+2026-04-10 10:35:57,228 | INFO | mcp.server.lowlevel.server | - | Processing request of type ListToolsRequest
+2026-04-10 10:35:57,300 | INFO | mcp.server.streamable_http | - | Terminating session: 5440a263a5964efc91a8e23e65f6c293
+2026-04-10 10:36:31,272 | INFO | mcp.server.streamable_http_manager | - | Created new transport with session ID: b71225eb92154ac2a6dc563350153e41
+2026-04-10 10:36:31,391 | INFO | mcp.server.lowlevel.server | - | Processing request of type CallToolRequest
+2026-04-10 10:36:31,464 | INFO | mcp.server.lowlevel.server | - | Processing request of type ListToolsRequest
+2026-04-10 10:36:31,534 | INFO | mcp.server.streamable_http | - | Terminating session: b71225eb92154ac2a6dc563350153e41
+2026-04-10 10:36:47,974 | INFO | mcp.server.streamable_http_manager | - | Created new transport with session ID: 69fb95dd4072480f84550a08f302cf94
+2026-04-10 10:36:48,096 | INFO | mcp.server.lowlevel.server | - | Processing request of type CallToolRequest
+2026-04-10 10:36:48,166 | INFO | mcp.server.lowlevel.server | - | Processing request of type ListToolsRequest
+2026-04-10 10:36:48,226 | INFO | mcp.server.streamable_http | - | Terminating session: 69fb95dd4072480f84550a08f302cf94
+2026-04-10 10:37:04,817 | INFO | mcp.server.streamable_http_manager | - | Created new transport with session ID: e7e3b756435247459b7b2e1b68a6bb61
+2026-04-10 10:37:04,959 | INFO | mcp.server.lowlevel.server | - | Processing request of type CallToolRequest
+2026-04-10 10:37:05,029 | INFO | mcp.server.lowlevel.server | - | Processing request of type ListToolsRequest
+2026-04-10 10:37:05,091 | INFO | mcp.server.streamable_http | - | Terminating session: e7e3b756435247459b7b2e1b68a6bb61
+2026-04-10 10:37:32,585 | INFO | mcp.server.streamable_http_manager | - | Created new transport with session ID: 6fab73dcd24d4ec599312cccbe047bbf
+2026-04-10 10:37:32,707 | INFO | mcp.server.lowlevel.server | - | Processing request of type CallToolRequest
+2026-04-10 10:37:32,781 | INFO | mcp.server.lowlevel.server | - | Processing request of type ListToolsRequest
+2026-04-10 10:37:32,852 | INFO | mcp.server.streamable_http | - | Terminating session: 6fab73dcd24d4ec599312cccbe047bbf
+2026-04-10 10:38:27,825 | INFO | mcp.server.streamable_http_manager | - | Created new transport with session ID: 7bb1884168af4a62b2bb22bc94aeacf6
+2026-04-10 10:38:27,959 | INFO | mcp.server.lowlevel.server | - | Processing request of type CallToolRequest
+2026-04-10 10:38:28,030 | INFO | mcp.server.lowlevel.server | - | Processing request of type ListToolsRequest
+2026-04-10 10:38:28,175 | INFO | mcp.server.streamable_http | - | Terminating session: 7bb1884168af4a62b2bb22bc94aeacf6
+2026-04-10 10:39:20,741 | INFO | mcp.server.streamable_http_manager | - | Created new transport with session ID: 92f090c612bf45a28ea50de6c5c39c89
+2026-04-10 10:39:20,866 | INFO | mcp.server.lowlevel.server | - | Processing request of type CallToolRequest
+2026-04-10 10:39:21,042 | INFO | mcp.server.lowlevel.server | - | Processing request of type ListToolsRequest
+2026-04-10 10:39:21,106 | INFO | mcp.server.streamable_http | - | Terminating session: 92f090c612bf45a28ea50de6c5c39c89
+2026-04-10 10:40:13,955 | INFO | mcp.server.streamable_http_manager | - | Created new transport with session ID: 05ca0ef5a49d40eabb460dd119530567
+2026-04-10 10:40:14,087 | INFO | mcp.server.lowlevel.server | - | Processing request of type CallToolRequest
+2026-04-10 10:40:14,156 | INFO | mcp.server.lowlevel.server | - | Processing request of type ListToolsRequest
+2026-04-10 10:40:14,225 | INFO | mcp.server.streamable_http | - | Terminating session: 05ca0ef5a49d40eabb460dd119530567
+2026-04-10 10:40:44,752 | INFO | mcp.server.streamable_http_manager | - | Created new transport with session ID: 75521eadcf9d439897630f61ecc0a614
+2026-04-10 10:40:44,872 | INFO | mcp.server.lowlevel.server | - | Processing request of type CallToolRequest
+2026-04-10 10:40:44,945 | INFO | mcp.server.lowlevel.server | - | Processing request of type ListToolsRequest
+2026-04-10 10:40:45,016 | INFO | mcp.server.streamable_http | - | Terminating session: 75521eadcf9d439897630f61ecc0a614
+2026-04-10 10:41:00,900 | INFO | mcp.server.streamable_http_manager | - | Created new transport with session ID: a19e42f98d83455baba1464f83f17b3f
+2026-04-10 10:41:01,023 | INFO | mcp.server.lowlevel.server | - | Processing request of type CallToolRequest
+2026-04-10 10:41:01,093 | INFO | mcp.server.lowlevel.server | - | Processing request of type ListToolsRequest
+2026-04-10 10:41:01,909 | INFO | mcp.server.streamable_http | - | Terminating session: a19e42f98d83455baba1464f83f17b3f
+2026-04-10 10:42:15,107 | INFO | mcp.server.streamable_http_manager | - | Created new transport with session ID: ed67ca1e320c4691a4c2e553a2a91d9d
+2026-04-10 10:42:15,233 | INFO | mcp.server.lowlevel.server | - | Processing request of type CallToolRequest
+2026-04-10 10:42:15,307 | INFO | mcp.server.lowlevel.server | - | Processing request of type ListToolsRequest
+2026-04-10 10:42:15,374 | INFO | mcp.server.streamable_http | - | Terminating session: ed67ca1e320c4691a4c2e553a2a91d9d
+2026-04-10 10:42:25,814 | INFO | mcp.server.streamable_http_manager | - | Created new transport with session ID: 2f1c3f4e19d54f528ad188c2da02aecc
+2026-04-10 10:42:25,937 | INFO | mcp.server.lowlevel.server | - | Processing request of type CallToolRequest
+2026-04-10 10:42:26,004 | INFO | mcp.server.lowlevel.server | - | Processing request of type ListToolsRequest
+2026-04-10 10:42:26,072 | INFO | mcp.server.streamable_http | - | Terminating session: 2f1c3f4e19d54f528ad188c2da02aecc
+2026-04-10 10:43:08,056 | INFO | mcp.server.streamable_http_manager | - | Created new transport with session ID: 5204567189a8491c80e506a0e72dc4f8
+2026-04-10 10:43:08,318 | INFO | mcp.server.lowlevel.server | - | Processing request of type CallToolRequest
+2026-04-10 10:43:08,382 | INFO | mcp.server.lowlevel.server | - | Processing request of type ListToolsRequest
+2026-04-10 10:43:08,452 | INFO | mcp.server.streamable_http | - | Terminating session: 5204567189a8491c80e506a0e72dc4f8
+2026-04-10 10:43:18,674 | INFO | mcp.server.streamable_http_manager | - | Created new transport with session ID: 352eab86f0b54debaede002f0fac4e26
+2026-04-10 10:43:18,788 | INFO | mcp.server.lowlevel.server | - | Processing request of type CallToolRequest
+2026-04-10 10:43:18,851 | INFO | mcp.server.lowlevel.server | - | Processing request of type ListToolsRequest
+2026-04-10 10:43:18,913 | INFO | mcp.server.streamable_http | - | Terminating session: 352eab86f0b54debaede002f0fac4e26
+2026-04-10 10:43:24,502 | INFO | mcp.server.streamable_http_manager | - | Created new transport with session ID: 8363c3ca06664c3799d2336274aa278d
+2026-04-10 10:43:24,621 | INFO | mcp.server.lowlevel.server | - | Processing request of type CallToolRequest
+2026-04-10 10:43:24,686 | INFO | mcp.server.lowlevel.server | - | Processing request of type ListToolsRequest
+2026-04-10 10:43:24,747 | INFO | mcp.server.streamable_http | - | Terminating session: 8363c3ca06664c3799d2336274aa278d
+2026-04-10 10:43:27,433 | INFO | mcp.server.streamable_http_manager | - | Created new transport with session ID: 0694df8bfcc8459ba27a5e1b28277552
+2026-04-10 10:43:27,552 | INFO | mcp.server.lowlevel.server | - | Processing request of type CallToolRequest
+2026-04-10 10:43:27,616 | INFO | mcp.server.lowlevel.server | - | Processing request of type ListToolsRequest
+2026-04-10 10:43:27,686 | INFO | mcp.server.streamable_http | - | Terminating session: 0694df8bfcc8459ba27a5e1b28277552
+2026-04-10 10:43:37,239 | INFO | mcp.server.streamable_http_manager | - | Created new transport with session ID: b44f589d25234a8c850612c15371e197
+2026-04-10 10:43:37,362 | INFO | mcp.server.lowlevel.server | - | Processing request of type CallToolRequest
+2026-04-10 10:43:37,433 | INFO | mcp.server.lowlevel.server | - | Processing request of type ListToolsRequest
+2026-04-10 10:43:37,500 | INFO | mcp.server.streamable_http | - | Terminating session: b44f589d25234a8c850612c15371e197
+2026-04-10 10:43:46,132 | INFO | mcp.server.streamable_http_manager | - | Created new transport with session ID: 55ccbc6681fb44e5b8af5fbc81f1944a
+2026-04-10 10:43:46,255 | INFO | mcp.server.lowlevel.server | - | Processing request of type CallToolRequest
+2026-04-10 10:43:46,326 | INFO | mcp.server.lowlevel.server | - | Processing request of type ListToolsRequest
+2026-04-10 10:43:46,388 | INFO | mcp.server.streamable_http | - | Terminating session: 55ccbc6681fb44e5b8af5fbc81f1944a
+2026-04-10 10:43:55,974 | INFO | mcp.server.streamable_http_manager | - | Created new transport with session ID: 0d2d86b370874af4867f701e55ac3ef0
+2026-04-10 10:43:56,097 | INFO | mcp.server.lowlevel.server | - | Processing request of type CallToolRequest
+2026-04-10 10:43:56,177 | INFO | mcp.server.lowlevel.server | - | Processing request of type ListToolsRequest
+2026-04-10 10:43:56,246 | INFO | mcp.server.streamable_http | - | Terminating session: 0d2d86b370874af4867f701e55ac3ef0
+2026-04-10 10:44:01,677 | INFO | mcp.server.streamable_http_manager | - | Created new transport with session ID: abbeba1a874e4e789eef28d498c385be
+2026-04-10 10:44:01,909 | INFO | mcp.server.lowlevel.server | - | Processing request of type CallToolRequest
+2026-04-10 10:44:01,989 | INFO | mcp.server.lowlevel.server | - | Processing request of type ListToolsRequest
+2026-04-10 10:44:02,055 | INFO | mcp.server.streamable_http | - | Terminating session: abbeba1a874e4e789eef28d498c385be
+2026-04-10 10:44:15,576 | INFO | mcp.server.streamable_http_manager | - | Created new transport with session ID: 090eed64040343239ce0be99eb178754
+2026-04-10 10:44:15,829 | INFO | mcp.server.lowlevel.server | - | Processing request of type CallToolRequest
+2026-04-10 10:44:15,965 | INFO | mcp.server.lowlevel.server | - | Processing request of type ListToolsRequest
+2026-04-10 10:44:16,037 | INFO | mcp.server.streamable_http | - | Terminating session: 090eed64040343239ce0be99eb178754
+2026-04-10 10:44:39,416 | INFO | mcp.server.streamable_http_manager | - | Created new transport with session ID: a08825e6dfcb4e43871421135fb791ba
+2026-04-10 10:44:39,538 | INFO | mcp.server.lowlevel.server | - | Processing request of type CallToolRequest
+2026-04-10 10:44:39,727 | INFO | mcp.server.lowlevel.server | - | Processing request of type ListToolsRequest
+2026-04-10 10:44:39,797 | INFO | mcp.server.streamable_http | - | Terminating session: a08825e6dfcb4e43871421135fb791ba
+2026-04-10 10:45:05,457 | INFO | mcp.server.streamable_http_manager | - | Created new transport with session ID: 57e6bfd8ae5646968b7b35fae748fac5
+2026-04-10 10:45:05,583 | INFO | mcp.server.lowlevel.server | - | Processing request of type CallToolRequest
+2026-04-10 10:45:05,771 | INFO | mcp.server.lowlevel.server | - | Processing request of type ListToolsRequest
+2026-04-10 10:45:05,838 | INFO | mcp.server.streamable_http | - | Terminating session: 57e6bfd8ae5646968b7b35fae748fac5
+2026-04-10 10:45:09,837 | INFO | mcp.server.streamable_http_manager | - | Created new transport with session ID: 158b8baf57774d3aac9429b766c2f179
+2026-04-10 10:45:09,963 | INFO | mcp.server.lowlevel.server | - | Processing request of type CallToolRequest
+2026-04-10 10:45:10,033 | INFO | mcp.server.lowlevel.server | - | Processing request of type ListToolsRequest
+2026-04-10 10:45:10,107 | INFO | mcp.server.streamable_http | - | Terminating session: 158b8baf57774d3aac9429b766c2f179
+2026-04-10 10:45:20,896 | INFO | mcp.server.streamable_http_manager | - | Created new transport with session ID: 4a14734ebeb54754a40af9da800209ee
+2026-04-10 10:45:21,011 | INFO | mcp.server.lowlevel.server | - | Processing request of type CallToolRequest
+2026-04-10 10:45:21,080 | INFO | mcp.server.lowlevel.server | - | Processing request of type ListToolsRequest
+2026-04-10 10:45:21,153 | INFO | mcp.server.streamable_http | - | Terminating session: 4a14734ebeb54754a40af9da800209ee
+2026-04-10 10:45:32,696 | INFO | mcp.server.streamable_http_manager | - | Created new transport with session ID: 4fe20b240321479d92bd2818f42c4e72
+2026-04-10 10:45:32,822 | INFO | mcp.server.lowlevel.server | - | Processing request of type CallToolRequest
+2026-04-10 10:45:32,884 | INFO | mcp.server.lowlevel.server | - | Processing request of type ListToolsRequest
+2026-04-10 10:45:32,958 | INFO | mcp.server.streamable_http | - | Terminating session: 4fe20b240321479d92bd2818f42c4e72
+2026-04-10 10:45:42,367 | INFO | mcp.server.streamable_http_manager | - | Created new transport with session ID: 81eab33470294a5984c8be081a6aac73
+2026-04-10 10:45:42,491 | INFO | mcp.server.lowlevel.server | - | Processing request of type CallToolRequest
+2026-04-10 10:45:42,560 | INFO | mcp.server.lowlevel.server | - | Processing request of type ListToolsRequest
+2026-04-10 10:45:42,630 | INFO | mcp.server.streamable_http | - | Terminating session: 81eab33470294a5984c8be081a6aac73
+2026-04-10 10:45:48,779 | INFO | mcp.server.streamable_http_manager | - | Created new transport with session ID: 69112a13c0c74c608552d7d567e9f51e
+2026-04-10 10:45:48,902 | INFO | mcp.server.lowlevel.server | - | Processing request of type CallToolRequest
+2026-04-10 10:45:48,964 | INFO | mcp.server.lowlevel.server | - | Processing request of type ListToolsRequest
+2026-04-10 10:45:49,027 | INFO | mcp.server.streamable_http | - | Terminating session: 69112a13c0c74c608552d7d567e9f51e
+2026-04-10 10:48:41,585 | INFO | mcp.server.streamable_http_manager | - | Created new transport with session ID: bee2e3ed3a7041d6bdafcd599abbd2bb
+2026-04-10 10:48:41,708 | INFO | mcp.server.lowlevel.server | - | Processing request of type CallToolRequest
+2026-04-10 10:48:41,780 | INFO | mcp.server.lowlevel.server | - | Processing request of type ListToolsRequest
+2026-04-10 10:48:41,849 | INFO | mcp.server.streamable_http | - | Terminating session: bee2e3ed3a7041d6bdafcd599abbd2bb
+2026-04-10 10:48:52,754 | INFO | mcp.server.streamable_http_manager | - | Created new transport with session ID: 6fe3984548f3482a907bfaa9b188e541
+2026-04-10 10:48:52,869 | INFO | mcp.server.lowlevel.server | - | Processing request of type CallToolRequest
+2026-04-10 10:48:52,932 | INFO | mcp.server.lowlevel.server | - | Processing request of type ListToolsRequest
+2026-04-10 10:48:53,000 | INFO | mcp.server.streamable_http | - | Terminating session: 6fe3984548f3482a907bfaa9b188e541
+2026-04-10 10:49:06,249 | INFO | mcp.server.streamable_http_manager | - | Created new transport with session ID: 8ee8336a27e149cbaaae552de8375c3d
+2026-04-10 10:49:06,374 | INFO | mcp.server.lowlevel.server | - | Processing request of type CallToolRequest
+2026-04-10 10:49:06,446 | INFO | mcp.server.lowlevel.server | - | Processing request of type ListToolsRequest
+2026-04-10 10:49:06,515 | INFO | mcp.server.streamable_http | - | Terminating session: 8ee8336a27e149cbaaae552de8375c3d
+2026-04-10 10:49:31,983 | INFO | mcp.server.streamable_http_manager | - | Created new transport with session ID: 6f86a29c9fbc412ab9def8c322793f51
+2026-04-10 10:49:32,105 | INFO | mcp.server.lowlevel.server | - | Processing request of type CallToolRequest
+2026-04-10 10:49:32,171 | INFO | mcp.server.lowlevel.server | - | Processing request of type ListToolsRequest
+2026-04-10 10:49:32,237 | INFO | mcp.server.streamable_http | - | Terminating session: 6f86a29c9fbc412ab9def8c322793f51
+2026-04-10 10:50:13,061 | INFO | mcp.server.streamable_http_manager | - | Created new transport with session ID: 13dc5207874a41bf94b8e7c21131a2c8
+2026-04-10 10:50:13,185 | INFO | mcp.server.lowlevel.server | - | Processing request of type CallToolRequest
+2026-04-10 10:50:13,367 | INFO | mcp.server.lowlevel.server | - | Processing request of type ListToolsRequest
+2026-04-10 10:50:13,430 | INFO | mcp.server.streamable_http | - | Terminating session: 13dc5207874a41bf94b8e7c21131a2c8
+2026-04-10 10:50:15,683 | INFO | mcp.server.streamable_http_manager | - | Created new transport with session ID: 9380a6ac80ef481788d221750df0b17a
+2026-04-10 10:50:15,816 | INFO | mcp.server.lowlevel.server | - | Processing request of type CallToolRequest
+2026-04-10 10:50:15,890 | INFO | mcp.server.lowlevel.server | - | Processing request of type ListToolsRequest
+2026-04-10 10:50:15,956 | INFO | mcp.server.streamable_http | - | Terminating session: 9380a6ac80ef481788d221750df0b17a

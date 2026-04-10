@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "deployment_config": {
+    "preview_url": "https://3000-in1gzdimbkk1qnluiol62.e2b.app",
+    "preview_port": 3000,
+    "project_name": "graphique-2026",
+    "framework": "nextjs-shadcn",
+    "directory": "/workspace/graphique-2026",
+    "env_file": null,
+    "servers": [
+      {
+        "deployment_url": "https://3000-in1gzdimbkk1qnluiol62.e2b.app",
+        "port": 3000,
+        "command": "PORT={PORT} bun run dev",
+        "session": "ii-app-web-graphique-2026-fullstack",
+        "run_dir": "/workspace/graphique-2026"
+      }
+    ]
+  }
+}

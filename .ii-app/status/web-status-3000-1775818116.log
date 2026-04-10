@@ -1,0 +1,224 @@
+    [at async transform (turbopack:///[turbopack-node]/transforms/postcss.ts:70:
+34)]
+    [at async run (turbopack:///[turbopack-node]/ipc/evaluate.ts:92:23)]
+
+Import trace:
+  Client Component Browser:
+    ./src/app/globals.css [Client Component Browser]
+    ./src/app/layout.tsx [Server Component]
+
+
+ ○ Compiling /_error ...
+ ✓ Compiled /_error in 1608ms
+ GET / 500 in 8879ms
+ ⨯ ./src/app/globals.css
+Error evaluating Node.js code
+CssSyntaxError: /workspace/graphique-2026/src/app/globals.css:3:1: The `dark` cl
+ass does not exist. If `dark` is a custom class, make sure it is defined within
+a `@layer` directive.
+    [at Input.error (turbopack:///[project]/node_modules/postcss/lib/input.js:13
+5:16)]
+    [at AtRule.error (turbopack:///[project]/node_modules/postcss/lib/node.js:14
+6:32)]
+    [at processApply (/workspace/graphique-2026/node_modules/tailwindcss/lib/lib
+/expandApplyAtRules.js:380:29)]
+    [at /workspace/graphique-2026/node_modules/tailwindcss/lib/lib/expandApplyAt
+Rules.js:551:9]
+    [at /workspace/graphique-2026/node_modules/tailwindcss/lib/processTailwindFe
+atures.js:55:50]
+    [at async plugins (/workspace/graphique-2026/node_modules/tailwindcss/lib/pl
+ugin.js:38:17)]
+    [at async LazyResult.runAsync (turbopack:///[project]/node_modules/postcss/l
+ib/lazy-result.js:293:11)]
+    [at async transform (turbopack:///[turbopack-node]/transforms/postcss.ts:70:
+34)]
+    [at async run (turbopack:///[turbopack-node]/ipc/evaluate.ts:92:23)]
+
+Import trace:
+  Client Component Browser:
+    ./src/app/globals.css [Client Component Browser]
+    ./src/app/layout.tsx [Server Component]
+
+
+ GET / 500 in 33ms
+ ⨯ ./src/app/globals.css
+Error evaluating Node.js code
+CssSyntaxError: /workspace/graphique-2026/src/app/globals.css:3:1: The `dark` cl
+ass does not exist. If `dark` is a custom class, make sure it is defined within
+a `@layer` directive.
+    [at Input.error (turbopack:///[project]/node_modules/postcss/lib/input.js:13
+5:16)]
+    [at AtRule.error (turbopack:///[project]/node_modules/postcss/lib/node.js:14
+6:32)]
+    [at processApply (/workspace/graphique-2026/node_modules/tailwindcss/lib/lib
+/expandApplyAtRules.js:380:29)]
+    [at /workspace/graphique-2026/node_modules/tailwindcss/lib/lib/expandApplyAt
+Rules.js:551:9]
+    [at /workspace/graphique-2026/node_modules/tailwindcss/lib/processTailwindFe
+atures.js:55:50]
+    [at async plugins (/workspace/graphique-2026/node_modules/tailwindcss/lib/pl
+ugin.js:38:17)]
+    [at async LazyResult.runAsync (turbopack:///[project]/node_modules/postcss/l
+ib/lazy-result.js:293:11)]
+    [at async transform (turbopack:///[turbopack-node]/transforms/postcss.ts:70:
+34)]
+    [at async run (turbopack:///[turbopack-node]/ipc/evaluate.ts:92:23)]
+
+Import trace:
+  Client Component Browser:
+    ./src/app/globals.css [Client Component Browser]
+    ./src/app/layout.tsx [Server Component]
+
+
+ GET / 500 in 37ms
+ ⨯ ./src/app/globals.css
+Error evaluating Node.js code
+CssSyntaxError: /workspace/graphique-2026/src/app/globals.css:3:1: The `dark` cl
+ass does not exist. If `dark` is a custom class, make sure it is defined within
+a `@layer` directive.
+    [at Input.error (turbopack:///[project]/node_modules/postcss/lib/input.js:13
+5:16)]
+    [at AtRule.error (turbopack:///[project]/node_modules/postcss/lib/node.js:14
+6:32)]
+    [at processApply (/workspace/graphique-2026/node_modules/tailwindcss/lib/lib
+/expandApplyAtRules.js:380:29)]
+    [at /workspace/graphique-2026/node_modules/tailwindcss/lib/lib/expandApplyAt
+Rules.js:551:9]
+    [at /workspace/graphique-2026/node_modules/tailwindcss/lib/processTailwindFe
+atures.js:55:50]
+    [at async plugins (/workspace/graphique-2026/node_modules/tailwindcss/lib/pl
+ugin.js:38:17)]
+    [at async LazyResult.runAsync (turbopack:///[project]/node_modules/postcss/l
+ib/lazy-result.js:293:11)]
+    [at async transform (turbopack:///[turbopack-node]/transforms/postcss.ts:70:
+34)]
+    [at async run (turbopack:///[turbopack-node]/ipc/evaluate.ts:92:23)]
+
+Import trace:
+  Client Component Browser:
+    ./src/app/globals.css [Client Component Browser]
+    ./src/app/layout.tsx [Server Component]
+
+
+ GET / 500 in 40ms
+ ⨯ ./src/app/globals.css
+Error evaluating Node.js code
+CssSyntaxError: /workspace/graphique-2026/src/app/globals.css:3:1: The `dark` cl
+ass does not exist. If `dark` is a custom class, make sure it is defined within
+a `@layer` directive.
+    [at Input.error (turbopack:///[project]/node_modules/postcss/lib/input.js:13
+5:16)]
+    [at AtRule.error (turbopack:///[project]/node_modules/postcss/lib/node.js:14
+6:32)]
+    [at processApply (/workspace/graphique-2026/node_modules/tailwindcss/lib/lib
+/expandApplyAtRules.js:380:29)]
+    [at /workspace/graphique-2026/node_modules/tailwindcss/lib/lib/expandApplyAt
+Rules.js:551:9]
+    [at /workspace/graphique-2026/node_modules/tailwindcss/lib/processTailwindFe
+atures.js:55:50]
+    [at async plugins (/workspace/graphique-2026/node_modules/tailwindcss/lib/pl
+ugin.js:38:17)]
+    [at async LazyResult.runAsync (turbopack:///[project]/node_modules/postcss/l
+ib/lazy-result.js:293:11)]
+    [at async transform (turbopack:///[turbopack-node]/transforms/postcss.ts:70:
+34)]
+    [at async run (turbopack:///[turbopack-node]/ipc/evaluate.ts:92:23)]
+
+Import trace:
+  Client Component Browser:
+    ./src/app/globals.css [Client Component Browser]
+    ./src/app/layout.tsx [Server Component]
+
+
+ GET / 500 in 35ms
+ ⨯ ./src/app/globals.css
+Error evaluating Node.js code
+CssSyntaxError: /workspace/graphique-2026/src/app/globals.css:3:1: The `dark` cl
+ass does not exist. If `dark` is a custom class, make sure it is defined within
+a `@layer` directive.
+    [at Input.error (turbopack:///[project]/node_modules/postcss/lib/input.js:13
+5:16)]
+    [at AtRule.error (turbopack:///[project]/node_modules/postcss/lib/node.js:14
+6:32)]
+    [at processApply (/workspace/graphique-2026/node_modules/tailwindcss/lib/lib
+/expandApplyAtRules.js:380:29)]
+    [at /workspace/graphique-2026/node_modules/tailwindcss/lib/lib/expandApplyAt
+Rules.js:551:9]
+    [at /workspace/graphique-2026/node_modules/tailwindcss/lib/processTailwindFe
+atures.js:55:50]
+    [at async plugins (/workspace/graphique-2026/node_modules/tailwindcss/lib/pl
+ugin.js:38:17)]
+    [at async LazyResult.runAsync (turbopack:///[project]/node_modules/postcss/l
+ib/lazy-result.js:293:11)]
+    [at async transform (turbopack:///[turbopack-node]/transforms/postcss.ts:70:
+34)]
+    [at async run (turbopack:///[turbopack-node]/ipc/evaluate.ts:92:23)]
+
+Import trace:
+  Client Component Browser:
+    ./src/app/globals.css [Client Component Browser]
+    ./src/app/layout.tsx [Server Component]
+
+
+ GET / 500 in 33ms
+ ⨯ ./src/app/globals.css
+Error evaluating Node.js code
+CssSyntaxError: /workspace/graphique-2026/src/app/globals.css:3:1: The `dark` cl
+ass does not exist. If `dark` is a custom class, make sure it is defined within
+a `@layer` directive.
+    [at Input.error (turbopack:///[project]/node_modules/postcss/lib/input.js:13
+5:16)]
+    [at AtRule.error (turbopack:///[project]/node_modules/postcss/lib/node.js:14
+6:32)]
+    [at processApply (/workspace/graphique-2026/node_modules/tailwindcss/lib/lib
+/expandApplyAtRules.js:380:29)]
+    [at /workspace/graphique-2026/node_modules/tailwindcss/lib/lib/expandApplyAt
+Rules.js:551:9]
+    [at /workspace/graphique-2026/node_modules/tailwindcss/lib/processTailwindFe
+atures.js:55:50]
+    [at async plugins (/workspace/graphique-2026/node_modules/tailwindcss/lib/pl
+ugin.js:38:17)]
+    [at async LazyResult.runAsync (turbopack:///[project]/node_modules/postcss/l
+ib/lazy-result.js:293:11)]
+    [at async transform (turbopack:///[turbopack-node]/transforms/postcss.ts:70:
+34)]
+    [at async run (turbopack:///[turbopack-node]/ipc/evaluate.ts:92:23)]
+
+Import trace:
+  Client Component Browser:
+    ./src/app/globals.css [Client Component Browser]
+    ./src/app/layout.tsx [Server Component]
+
+
+ GET / 500 in 36ms
+ ⨯ ./src/app/globals.css
+Error evaluating Node.js code
+CssSyntaxError: /workspace/graphique-2026/src/app/globals.css:3:1: The `dark` cl
+ass does not exist. If `dark` is a custom class, make sure it is defined within
+a `@layer` directive.
+    [at Input.error (turbopack:///[project]/node_modules/postcss/lib/input.js:13
+5:16)]
+    [at AtRule.error (turbopack:///[project]/node_modules/postcss/lib/node.js:14
+6:32)]
+    [at processApply (/workspace/graphique-2026/node_modules/tailwindcss/lib/lib
+/expandApplyAtRules.js:380:29)]
+    [at /workspace/graphique-2026/node_modules/tailwindcss/lib/lib/expandApplyAt
+Rules.js:551:9]
+    [at /workspace/graphique-2026/node_modules/tailwindcss/lib/processTailwindFe
+atures.js:55:50]
+    [at async plugins (/workspace/graphique-2026/node_modules/tailwindcss/lib/pl
+ugin.js:38:17)]
+    [at async LazyResult.runAsync (turbopack:///[project]/node_modules/postcss/l
+ib/lazy-result.js:293:11)]
+    [at async transform (turbopack:///[turbopack-node]/transforms/postcss.ts:70:
+34)]
+    [at async run (turbopack:///[turbopack-node]/ipc/evaluate.ts:92:23)]
+
+Import trace:
+  Client Component Browser:
+    ./src/app/globals.css [Client Component Browser]
+    ./src/app/layout.tsx [Server Component]
+
+
+ GET / 500 in 34ms
+

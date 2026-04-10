@@ -1,0 +1,193 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Syne:wght@400..800&family=Inter:wght@300..700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   GRAPHIQUE 2026 — Design Token System
+   Dark-first observatory / precision instrument aesthetic
+   ───────────────────────────────────────────────────────────────────────────── */
+
+@layer base {
+  :root {
+    /* shadcn/ui compatibility tokens — dark (default) */
+    --background: 222 47% 7%;
+    --foreground: 213 31% 91%;
+    --card: 222 47% 9%;
+    --card-foreground: 213 31% 91%;
+    --popover: 222 47% 8%;
+    --popover-foreground: 213 31% 91%;
+    --primary: 192 100% 50%;
+    --primary-foreground: 222 47% 7%;
+    --secondary: 222 30% 14%;
+    --secondary-foreground: 213 31% 80%;
+    --muted: 222 30% 12%;
+    --muted-foreground: 215 20% 50%;
+    --accent: 222 30% 15%;
+    --accent-foreground: 213 31% 91%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 215 25% 20%;
+    --input: 215 25% 15%;
+    --ring: 192 100% 50%;
+    --radius: 0.5rem;
+
+    /* GRAPHIQUE custom tokens */
+    --canvas-bg: #0A0E1A;
+    --header-bg: #0D1117;
+    --panel-bg: #0F1420;
+    --panel-header-bg: #111827;
+    --editor-bg: #0D1117;
+    --editor-header-bg: #111520;
+    --statusbar-bg: #090D15;
+    --surface-bg: #151D2E;
+
+    --cyan: #00D2FF;
+    --amber: #FFB347;
+    --purple: #A78BFA;
+    --green: #4ADE80;
+    --red: #F87171;
+
+    --glow-cyan: 0 0 20px rgba(0, 210, 255, 0.15);
+    --glow-amber: 0 0 20px rgba(255, 179, 71, 0.15);
+
+    /* Chart colors for shadcn/ui compatibility */
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+  }
+
+  /* Light theme override */
+  .theme-light {
+    --background: 0 0% 98%;
+    --foreground: 222 47% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 10%;
+    --primary: 192 100% 35%;
+    --primary-foreground: 0 0% 100%;
+    --muted: 210 20% 95%;
+    --muted-foreground: 215 25% 45%;
+    --border: 215 20% 85%;
+    --input: 215 20% 90%;
+
+    --canvas-bg: #F0F4F8;
+    --header-bg: #FFFFFF;
+    --panel-bg: #F7F9FC;
+    --panel-header-bg: #EAEEF3;
+    --editor-bg: #FAFAFA;
+    --editor-header-bg: #F0F4F8;
+    --statusbar-bg: #E8EEF5;
+    --surface-bg: #EDF2F7;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    font-size: 14px;
+  }
+
+  body {
+    background: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-family: 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow: hidden;
+  }
+}
+
+/* ── Utility classes for GRAPHIQUE surfaces ─────────────────────────────────── */
+@layer utilities {
+  .bg-canvas { background: var(--canvas-bg); }
+  .bg-header { background: var(--header-bg); }
+  .bg-panel { background: var(--panel-bg); }
+  .bg-panel-header { background: var(--panel-header-bg); }
+  .bg-editor-bg { background: var(--editor-bg); }
+  .bg-editor-header { background: var(--editor-header-bg); }
+  .bg-statusbar { background: var(--statusbar-bg); }
+  .bg-surface { background: var(--surface-bg); }
+
+  /* Opacity variants for custom surface colors */
+  .bg-surface\/80 { background: rgba(21, 29, 46, 0.8) !important; }
+  .bg-surface\/70 { background: rgba(21, 29, 46, 0.7) !important; }
+  .bg-surface\/50 { background: rgba(21, 29, 46, 0.5) !important; }
+
+  .font-jetbrains { font-family: 'JetBrains Mono', monospace; }
+  .font-syne { font-family: 'Syne', sans-serif; }
+
+  .text-cyan-glow { text-shadow: 0 0 12px rgba(0, 210, 255, 0.5); }
+  .text-amber-glow { text-shadow: 0 0 12px rgba(255, 179, 71, 0.5); }
+}
+
+/* ── Mermaid SVG overrides for GRAPHIQUE canvas ─────────────────────────────── */
+.graph-canvas-wrapper svg {
+  max-width: 100% !important;
+  display: block;
+  transition: transform 0.05s ease-out;
+}
+
+/* Prevent text selection on canvas drag */
+.graph-canvas-wrapper {
+  user-select: none;
+}
+
+/* ── Scrollbar styling ───────────────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 210, 255, 0.15);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 210, 255, 0.3);
+}
+
+/* ── Monaco editor dark theme overrides ─────────────────────────────────────── */
+.monaco-editor .margin {
+  background: var(--editor-bg) !important;
+}
+.monaco-editor-background {
+  background: var(--editor-bg) !important;
+}
+.monaco-editor .lines-content {
+  background: var(--editor-bg) !important;
+}
+
+/* ── Panel resize handle ─────────────────────────────────────────────────────── */
+.resize-handle {
+  cursor: row-resize;
+  height: 4px;
+  background: transparent;
+  transition: background 0.15s;
+}
+.resize-handle:hover {
+  background: rgba(0, 210, 255, 0.2);
+}
+
+/* ── Animation keyframes ─────────────────────────────────────────────────────── */
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(0, 210, 255, 0.2); }
+  50% { box-shadow: 0 0 16px rgba(0, 210, 255, 0.4); }
+}
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-glow { animation: glow-pulse 2.5s ease-in-out infinite; }
+.animate-fade-in-up { animation: fade-in-up 0.3s ease-out; }
