@@ -6,7 +6,7 @@
 import { useCallback, useState } from "react";
 import { useGraphique } from "@/store/graphique-store";
 import type { LayoutAlgorithm, GraphiqueTheme } from "@/lib/graph/types";
-import { LAYOUT_LABELS, LLM_PROVIDERS } from "@/lib/graph/types";
+import { LAYOUT_LABELS } from "@/lib/graph/types";
 import { SAMPLE_DIAGRAMS } from "@/lib/graph/mermaid-utils";
 import {
   exportToPNG,
@@ -21,7 +21,7 @@ import {
   Download,
   Code2,
   SlidersHorizontal,
-  Map,
+  Map as MapIcon,
   Bot,
   ChevronDown,
   FileDown,
@@ -29,6 +29,7 @@ import {
   Layers,
   GitBranch,
   Circle,
+  CircleDot,
   TreePine,
   Zap,
   Grid3x3,
@@ -60,6 +61,7 @@ const LAYOUT_ICONS: Record<string, React.ReactNode> = {
   tree: <TreePine className="w-3.5 h-3.5" />,
   circular: <Circle className="w-3.5 h-3.5" />,
   orthogonal: <Grid3x3 className="w-3.5 h-3.5" />,
+  concentric: <CircleDot className="w-3.5 h-3.5" />,
   "elk-layered": <GitBranch className="w-3.5 h-3.5" />,
   "elk-mrtree": <TreePine className="w-3.5 h-3.5" />,
   "elk-radial": <Circle className="w-3.5 h-3.5" />,
@@ -90,7 +92,7 @@ const THEMES: { id: GraphiqueTheme; label: string }[] = [
 const LAYOUT_GROUPS = [
   {
     label: "Standard",
-    items: ["hierarchical", "force", "tree", "circular", "orthogonal", "bus"] as LayoutAlgorithm[],
+    items: ["hierarchical", "force", "tree", "circular", "concentric", "orthogonal", "bus"] as LayoutAlgorithm[],
   },
   {
     label: "ELK Advanced",
@@ -102,9 +104,9 @@ export default function Toolbar() {
   const { state, dispatch, setLayout, setTheme } = useGraphique();
   const [exporting, setExporting] = useState(false);
 
-  const getSvgElement = (): SVGElement | null => {
+  const getSvgElement = useCallback((): SVGElement | null => {
     return document.querySelector(".graph-canvas-wrapper svg");
-  };
+  }, []);
 
   const handleExportPNG = useCallback(async () => {
     const svg = getSvgElement();
@@ -115,13 +117,13 @@ export default function Toolbar() {
     } finally {
       setExporting(false);
     }
-  }, []);
+  }, [getSvgElement]);
 
   const handleExportSVG = useCallback(() => {
     const svg = getSvgElement();
     if (!svg) return;
     exportToSVG(svg);
-  }, []);
+  }, [getSvgElement]);
 
   const handleExportPDF = useCallback(async () => {
     const svg = getSvgElement();
@@ -132,7 +134,7 @@ export default function Toolbar() {
     } finally {
       setExporting(false);
     }
-  }, []);
+  }, [getSvgElement]);
 
   const handleExportMermaid = useCallback(() => {
     exportToText(state.code, "mermaid");
@@ -357,7 +359,7 @@ export default function Toolbar() {
                 onClick={() => dispatch({ type: "TOGGLE_MINIMAP" })}
                 className={`w-8 h-8 ${state.minimapOpen ? "text-green-400 bg-green-500/10" : "text-muted-foreground"}`}
               >
-                <Map className="w-3.5 h-3.5" />
+                <MapIcon className="w-3.5 h-3.5" />
               </Button>
             </TooltipTrigger>
             <TooltipContent className="text-xs">Toggle Minimap</TooltipContent>

@@ -3,7 +3,8 @@
 // GRAPHIQUE 2026 — Global App State (React Context + useReducer)
 // ─────────────────────────────────────────────────────────────────────────────
 
-import React, {
+import type React from "react";
+import {
   createContext,
   useContext,
   useReducer,

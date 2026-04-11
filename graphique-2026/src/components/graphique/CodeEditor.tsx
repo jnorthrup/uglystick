@@ -71,7 +71,7 @@ export default function CodeEditor() {
             [/\b(graph|flowchart|sequenceDiagram|classDiagram|stateDiagram|erDiagram|gantt|pie|mindmap|gitGraph|xychart)\b/, "keyword"],
             [/\b(TD|LR|TB|RL|BT|subgraph|end|style|classDef|linkStyle|direction|participant|activate|deactivate|loop|alt|opt|else|Note|title|section|click)\b/, "keyword.control"],
             // Use strings for arrow patterns to avoid JSX parser issues
-            [new RegExp("(--[>ox]|===|==>|---|\\.\\.)"), "operator"],
+            [/(--[>ox]|===|==>|---|\.\.)/, "operator"],
             [/\[[^\]]*\]/, "string"],
             [/\([^)]*\)/, "type"],
             [/\{[^}]*\}/, "tag"],

@@ -64,6 +64,10 @@ describe("layoutToMermaidDirection", () => {
   it("maps elk-layered to TD", () => {
     expect(layoutToMermaidDirection("elk-layered")).toBe("TD");
   });
+
+  it("maps concentric to TB", () => {
+    expect(layoutToMermaidDirection("concentric")).toBe("TB");
+  });
 });
 
 describe("themeToMermaid", () => {

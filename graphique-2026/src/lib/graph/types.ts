@@ -116,6 +116,7 @@ export type LayoutAlgorithm =
   | "tree"
   | "circular"
   | "orthogonal"
+  | "concentric"
   | "elk-layered"
   | "elk-mrtree"
   | "elk-radial"
@@ -240,6 +241,7 @@ export const LAYOUT_LABELS: Record<LayoutAlgorithm, string> = {
   tree: "Tree",
   circular: "Circular",
   orthogonal: "Orthogonal",
+  concentric: "Concentric",
   "elk-layered": "ELK Layered",
   "elk-mrtree": "ELK Tree",
   "elk-radial": "ELK Radial",

@@ -4,12 +4,10 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useEffect, useRef, useCallback, useState } from "react";
-import { Map } from "lucide-react";
+import { Map as MapIcon } from "lucide-react";
 
 interface MinimapProps {
   svgWrapperRef: React.RefObject<HTMLDivElement>;
-  containerRef: React.RefObject<HTMLDivElement>;
-  zoomLevel: number;
   onNavigate: (relativeX: number, relativeY: number) => void;
   width?: number;
   height?: number;
@@ -17,8 +15,6 @@ interface MinimapProps {
 
 export default function Minimap({
   svgWrapperRef,
-  containerRef,
-  zoomLevel,
   onNavigate,
   width = 200,
   height = 130,
@@ -52,9 +48,10 @@ export default function Minimap({
         clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
       }
       // Ensure text elements have visible fill
-      clone.querySelectorAll("text").forEach((t) => {
-        if (!t.getAttribute("fill")) t.setAttribute("fill", "#cdd6f4");
-      });
+      const textNodes = clone.querySelectorAll("text");
+      for (const node of textNodes) {
+        if (!node.getAttribute("fill")) node.setAttribute("fill", "#cdd6f4");
+      }
 
       const svgData = new XMLSerializer().serializeToString(clone);
       const svgBlob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
@@ -74,7 +71,6 @@ export default function Minimap({
         const ox = (width - drawW) / 2;
         const oy = (availH - drawH) / 2;
         ctx.drawImage(img, ox, oy, drawW, drawH);
-        drawViewportIndicator(ctx, svgRect, width, availH, ox, oy, drawW, drawH);
         URL.revokeObjectURL(url);
       };
       img.onerror = () => {
@@ -99,45 +95,7 @@ export default function Minimap({
       cancelled = true;
       clearInterval(interval);
     };
-  }, [svgWrapperRef, zoomLevel, width, height]);
-
-  // Extract viewport indicator drawing to shared function
-  function drawViewportIndicator(
-    ctx: CanvasRenderingContext2D,
-    svgRect: DOMRect,
-    w: number,
-    h: number,
-    ox: number,
-    oy: number,
-    drawW: number,
-    drawH: number
-  ) {
-    const containerRect = containerRef.current?.getBoundingClientRect();
-    if (!containerRect) return;
-
-    const transform = svgWrapperRef.current?.querySelector("svg")?.style.transform || "";
-    const scaleMatch = transform.match(/scale\(([-\d.]+)\)/);
-    const translateMatch = transform.match(/translate\(([-\d.]+)px,\s*([-\d.]+)px\)/);
-    const k = scaleMatch ? parseFloat(scaleMatch[1]) : 1;
-    const tx = translateMatch ? parseFloat(translateMatch[1]) : 0;
-    const ty = translateMatch ? parseFloat(translateMatch[2]) : 0;
-
-    const viewW = containerRect.width / k;
-    const viewH = containerRect.height / k;
-    const originX = -tx / k;
-    const originY = -ty / k;
-
-    const vx = ox + (originX / svgRect.width) * drawW;
-    const vy = oy + (originY / svgRect.height) * drawH;
-    const vw = Math.min((viewW / svgRect.width) * drawW, drawW);
-    const vh = Math.min((viewH / svgRect.height) * drawH, drawH);
-
-    ctx.strokeStyle = "rgba(6, 182, 212, 0.7)";
-    ctx.lineWidth = 1.5;
-    ctx.fillStyle = "rgba(6, 182, 212, 0.1)";
-    ctx.fillRect(vx, vy, vw, vh);
-    ctx.strokeRect(vx, vy, vw, vh);
-  }
+  }, [svgWrapperRef, width, height]);
 
   // Handle click to navigate
   const handleClick = useCallback(
@@ -181,7 +139,7 @@ export default function Minimap({
     >
       {/* Header */}
       <div className="flex items-center gap-1 px-2 py-1 border-b border-border/30 bg-panel-header">
-        <Map className="w-2.5 h-2.5 text-cyan-400" />
+        <MapIcon className="w-2.5 h-2.5 text-cyan-400" />
         <span className="text-[9px] font-mono text-muted-foreground/60 uppercase tracking-wider">
           Minimap
         </span>

@@ -3,6 +3,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import type { LayoutAlgorithm, GraphiqueTheme } from "./types";
+import type { MermaidConfig } from "mermaid";
 
 /**
  * Maps GRAPHIQUE layout algorithms to Mermaid graph direction
@@ -23,27 +24,10 @@ export function layoutToMermaidDirection(
       return "LR";
     case "circular":
     case "elk-radial":
+    case "concentric":
       return "TB";
     default:
       return "TD";
-  }
-}
-
-/**
- * Returns the ELK layout string for use in Mermaid code (%%{init}%%)
- */
-export function algorithmToElkLayout(algorithm: LayoutAlgorithm): string | null {
-  switch (algorithm) {
-    case "elk-layered":
-      return "elk";
-    case "elk-mrtree":
-      return "elk";
-    case "elk-radial":
-      return "elk";
-    case "elk-force":
-      return "elk";
-    default:
-      return null;
   }
 }
 
@@ -56,27 +40,6 @@ export function setMermaidDirection(code: string, direction: string): string {
     /^(\s*graph\s+)(TB|TD|BT|LR|RL|BT)/im,
     `$1${direction}`
   );
-}
-
-/**
- * Injects ELK layout init config into Mermaid code
- */
-export function injectElkLayout(
-  code: string,
-  elkAlgorithm: string,
-  direction: string
-): string {
-  const trimmed = code.trim();
-  // Remove existing %%{init}%% block if present
-  const withoutInit = trimmed.replace(/^%%\{[\s\S]*?\}%%\s*/m, "");
-
-  const initBlock = `%%{init: {"theme": "base", "flowchart": {"curve": "basis", "defaultRenderer": "elk"}} }%%\n`;
-  // Replace graph direction
-  const withDir = withoutInit.replace(
-    /^(\s*graph\s+)(TB|TD|BT|LR|RL|BT)/im,
-    `$1${direction}`
-  );
-  return initBlock + withDir;
 }
 
 /**
@@ -94,12 +57,16 @@ export function injectLayoutForAlgorithm(
   // Strip any existing init blocks FIRST to avoid conflicts
   const withoutInit = trimmed.replace(/^%%\{[\s\S]*?\}%%\s*/g, "");
   // Only apply to flowcharts
-  if (!withoutInit.startsWith("graph ") && !withoutInit.startsWith("flowchart ")) {
+  if (
+    !withoutInit.startsWith("graph ") &&
+    !withoutInit.startsWith("flowchart ") &&
+    !withoutInit.startsWith("flowchart-elk ")
+  ) {
     return code;
   }
   // Replace direction
   return withoutInit.replace(
-    /^(\s*(?:graph|flowchart)\s+)(TB|TD|BT|LR|RL)/im,
+    /^(\s*(?:graph|flowchart(?:-elk)?)\s+)(TB|TD|BT|LR|RL)/im,
     `$1${direction}`
   );
 }
@@ -107,7 +74,7 @@ export function injectLayoutForAlgorithm(
 /**
  * Maps GRAPHIQUE theme to Mermaid theme
  */
-export function themeToMermaid(theme: GraphiqueTheme): string {
+export function themeToMermaid(theme: GraphiqueTheme): NonNullable<MermaidConfig["theme"]> {
   switch (theme) {
     case "dark":
     case "observatory":
@@ -118,7 +85,6 @@ export function themeToMermaid(theme: GraphiqueTheme): string {
       return "forest";
     case "neutral":
       return "neutral";
-    case "light":
     default:
       return "default";
   }
@@ -144,7 +110,11 @@ export type DiagramType =
 
 export function detectDiagramType(code: string): DiagramType {
   const trimmed = code.trim().toLowerCase();
-  if (trimmed.startsWith("graph ") || trimmed.startsWith("flowchart ")) return "flowchart";
+  if (
+    trimmed.startsWith("graph ") ||
+    trimmed.startsWith("flowchart ") ||
+    trimmed.startsWith("flowchart-elk ")
+  ) return "flowchart";
   if (trimmed.startsWith("sequencediagram")) return "sequence";
   if (trimmed.startsWith("classdiagram")) return "class";
   if (trimmed.startsWith("statediagram")) return "state";

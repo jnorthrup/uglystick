@@ -1,11 +1,16 @@
 /** @type {import('next').NextConfig} */
+const isDev = process.env.NODE_ENV === 'development';
+
 const nextConfig = {
-  // GitHub Pages requires basePath matching the repo name
-  basePath: '/uglystick',
+  // Pin Turbopack to this app so it does not climb to the parent workspace
+  // and resolve build-time modules from the wrong root.
+  turbopack: {
+    root: __dirname,
+  },
   
   // Always use static export for GitHub Pages deployment
   output: 'export',
-  distDir: process.env.BUILD_DIR || '../docs',
+  distDir: process.env.BUILD_DIR || (isDev ? '.next' : '../docs'),
   
   // GitHub Pages requires trailing slashes for proper routing
   trailingSlash: true,
