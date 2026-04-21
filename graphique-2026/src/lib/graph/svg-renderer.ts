@@ -1443,6 +1443,36 @@ export async function renderMermaidToSVG(
       return { svg: "", nodeCount: 0, edgeCount: 0, errors: [] };
     }
 
+    // --- GRAPHIQUE CUSTOM RENDERER INTERCEPT ---
+    // If it's a flowchart and we want a custom layout, use our own engine
+    const useCustomRenderer =
+      diagramType === "flowchart" &&
+      parsed &&
+      [
+        "hierarchical",
+        "force",
+        "tree",
+        "circular",
+        "orthogonal",
+        "concentric",
+        "bus",
+      ].includes(algorithm);
+
+    if (useCustomRenderer && parsed) {
+      try {
+        const layoutResult = computeLayout(parsed, algorithm, outerDirection);
+        const svg = renderSVG(layoutResult, theme);
+        return {
+          svg,
+          nodeCount,
+          edgeCount,
+          errors: [],
+        };
+      } catch (err) {
+        console.error("Custom layout failed, falling back to Mermaid:", err);
+      }
+    }
+
     try {
       const mermaidModule = await loadMermaidModule();
       const mermaid = mermaidModule.default;

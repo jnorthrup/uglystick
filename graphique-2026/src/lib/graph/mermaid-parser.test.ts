@@ -114,7 +114,7 @@ describe("renderMermaidToSVG", () => {
     const r = await renderMermaidToSVG(code, "concentric", "TB", "dark");
     expect(r.nodeCount).toBe(4);
     expect(r.edgeCount).toBe(3);
-    expect(r.svg).toContain("Group_One");
+    expect(r.svg).toContain("Group One");
     expect(r.svg).toContain("Start");
     expect(r.svg).toContain("Decision");
     expect(r.svg).toContain("Process");

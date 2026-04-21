@@ -293,6 +293,74 @@ export const SAMPLE_DIAGRAMS: Record<string, string> = {
    merge feature/llm id: "Merge AI"
    commit id: "v2026.1.0 release"`,
 
+  network: `flowchart LR
+    Internet((Internet)) --- Router[Edge Router]
+    Router --- CoreSwitch{Core Switch}
+
+    subgraph DC1 [Data Center 1]
+      CoreSwitch --- S1[Rack Switch 1]
+      S1 --- SRV1[Web Server 01]
+      S1 --- SRV2[Web Server 02]
+      S1 --- DB1[(Database 01)]
+    end
+
+    subgraph DC2 [Data Center 2]
+      CoreSwitch --- S2[Rack Switch 2]
+      S2 --- SRV3[Web Server 03]
+      S2 --- SRV4[Web Server 04]
+      S2 --- DB2[(Database 02)]
+    end
+
+    DB1 <-.->|Replication| DB2
+
+    style Internet fill:#f9f,stroke:#333,stroke-width:4px
+    style CoreSwitch fill:#00d2ff,stroke:#0099bb,color:#000`,
+
+  org: `flowchart TD
+    CEO([Chief Executive Officer])
+    CEO --- CTO([Chief Technology Officer])
+    CEO --- CFO([Chief Financial Officer])
+    CEO --- COO([Chief Operating Officer])
+
+    subgraph Tech [Technology Dept]
+      CTO --- VPE([VP Engineering])
+      CTO --- VPD([VP Design])
+      VPE --- ARCH[System Architects]
+      VPE --- DEV[Software Developers]
+      VPD --- UIX[UX/UI Designers]
+    end
+
+    subgraph Ops [Operations Dept]
+      COO --- HR[Human Resources]
+      COO --- FAC[Facilities]
+    end`,
+
+  complex: `flowchart TD
+    Start((Start)) --> Auth{Authenticated?}
+    Auth -- No --> Login[Login Page]
+    Login --> Auth
+    Auth -- Yes --> Dashboard[/User Dashboard/]
+
+    Dashboard --> Action1{Action A}
+    Dashboard --> Action2{Action B}
+
+    subgraph ServiceA [Microservice Alpha]
+      Action1 --> ProcA1[[Process A1]]
+      ProcA1 --> Cache[(Redis Cache)]
+      Cache --> ProcA2[[Process A2]]
+    end
+
+    subgraph ServiceB [Microservice Beta]
+      Action2 --> ProcB1[/Collect Data/]
+      ProcB1 --> Store[(S3 Bucket)]
+      Store --> ProcB2{Validate}
+    end
+
+    ProcA2 --> End((Finish))
+    ProcB2 -- OK --> End
+    ProcB2 -- Error --> ErrorHandle[Error Log]
+    ErrorHandle --> Dashboard`,
+
   dot: `digraph Architecture {
   rankdir=LR;
   node [shape=rectangle, style=filled, fontname="monospace"];
