@@ -88,12 +88,40 @@ export default function GraphCanvas() {
     const rect = containerRef.current.getBoundingClientRect();
     if (rect.width === 0 || rect.height === 0) return;
 
-    const scaleX = rect.width / init.w;
-    const scaleY = rect.height / init.h;
-    const factor = Math.min(scaleX, scaleY, 2) * 0.9;
+    // Target aspect ratio (16:9)
+    const TARGET_RATIO = 16 / 9;
+    const currentContainerRatio = rect.width / rect.height;
 
-    const cw = init.w / factor;
-    const ch = init.h / factor;
+    // Calculate factor to fit the graph into the container
+    let factor = Math.min(rect.width / init.w, rect.height / init.h, 2) * 0.9;
+
+    // Gravitation logic: if graph is very portrait or panorama,
+    // we adjust the viewBox to "gravitate" towards 16:9
+    const graphRatio = init.w / init.h;
+    let cw = init.w / factor;
+    let ch = init.h / factor;
+
+    // If we're far from 16:9, apply "pressure" from the edges
+    // to keep the important content centered in a 16:9-friendly footprint
+    if (Math.abs(graphRatio - TARGET_RATIO) > 0.5) {
+      // If we are more panorama than 16:9, increase height to gravitate towards 16:9
+      // If we are more portrait than 16:9, increase width to gravitate towards 16:9
+      if (graphRatio > TARGET_RATIO) {
+        // Panorama pressure: expand height to 16:9 ratio of width
+        ch = cw / TARGET_RATIO;
+      } else {
+        // Portrait pressure: expand width to 16:9 ratio of height
+        cw = ch * TARGET_RATIO;
+      }
+
+      // Re-check if our new dimensions fit the container, adjust factor if needed
+      const newScaleX = rect.width / cw;
+      const newScaleY = rect.height / ch;
+      const adjustFactor = Math.min(newScaleX, newScaleY, 1);
+      cw /= adjustFactor;
+      ch /= adjustFactor;
+    }
+
     const cx = init.x + init.w / 2;
     const cy = init.y + init.h / 2;
     const vb: VB = { x: cx - cw / 2, y: cy - ch / 2, w: cw, h: ch };

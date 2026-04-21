@@ -101,9 +101,9 @@ export default function GraphiqueApp() {
       <div className="flex flex-1 min-h-0 overflow-hidden">
         {/* Left sidebar panels */}
         {leftPanels.length > 0 && (
-          <div className="flex shrink-0 overflow-hidden">
+          <div className="flex flex-col shrink-0 overflow-hidden border-r border-border/40">
             {leftPanels.map((p) => (
-              <div key={p.id} className="h-full shrink-0">
+              <div key={p.id} className="flex-1 min-h-0 shrink-0">
                 {p.element}
               </div>
             ))}
@@ -131,9 +131,9 @@ export default function GraphiqueApp() {
 
         {/* Right sidebar panels */}
         {rightPanels.length > 0 && (
-          <div className="flex shrink-0 overflow-hidden">
+          <div className="flex flex-col shrink-0 overflow-hidden border-l border-border/40">
             {rightPanels.map((p) => (
-              <div key={p.id} className="h-full shrink-0">
+              <div key={p.id} className="flex-1 min-h-0 shrink-0">
                 {p.element}
               </div>
             ))}

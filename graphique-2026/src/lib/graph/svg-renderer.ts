@@ -55,7 +55,7 @@ interface LayoutResult {
   viewBox: { x: number; y: number; w: number; h: number };
 }
 
-type RouteStyle = "smooth" | "orthogonal" | "concentric";
+type RouteStyle = "smooth" | "orthogonal" | "concentric" | "perpendicular";
 
 interface RouteContext {
   nodeRingIndex?: Map<string, number>;
@@ -274,27 +274,62 @@ function layeredLayout(
   const orderedLayers = barycenterOrder(layers, parsed.edges);
   const pos = new Map<string, { x: number; y: number; layer: number }>();
 
+  // 16:9 Aspect Ratio Optimization
+  const TARGET_RATIO = 16 / 9;
+  const numLayers = orderedLayers.length;
+  const maxLayerSize = Math.max(...orderedLayers.map((l) => l.length));
+
+  // Dynamic Gaps based on "pressure" to reach 16:9
+  let dynamicHGap = H_GAP;
+  let dynamicVGap = V_GAP;
+
+  if (isVert) {
+    // Current raw ratio ~ (maxLayerSize * NODE_W) / (numLayers * NODE_H)
+    const rawRatio = (maxLayerSize * NODE_W) / (numLayers * NODE_H);
+    if (rawRatio < TARGET_RATIO) {
+      // Too portrait: increase H_GAP to push outwards
+      dynamicHGap = H_GAP * (TARGET_RATIO / Math.max(0.5, rawRatio));
+    } else {
+      // Too panorama: increase V_GAP to push downwards
+      dynamicVGap = V_GAP * (rawRatio / TARGET_RATIO);
+    }
+  } else {
+    // LR: raw ratio ~ (numLayers * NODE_W) / (maxLayerSize * NODE_H)
+    const rawRatio = (numLayers * NODE_W) / (maxLayerSize * NODE_H);
+    if (rawRatio < TARGET_RATIO) {
+      // Too portrait: increase V_GAP
+      dynamicVGap = V_GAP * (TARGET_RATIO / Math.max(0.5, rawRatio));
+    } else {
+      // Too panorama: increase H_GAP
+      dynamicHGap = H_GAP * (rawRatio / TARGET_RATIO);
+    }
+  }
+
+  // Cap the dynamic gaps to prevent extreme layouts
+  dynamicHGap = Math.min(dynamicHGap, 300);
+  dynamicVGap = Math.min(dynamicVGap, 300);
+
   for (let li = 0; li < orderedLayers.length; li++) {
     const layer = orderedLayers[li];
     const n = layer.length;
 
     if (isVert) {
-      const totalW = n * NODE_W + (n - 1) * H_GAP;
+      const totalW = n * NODE_W + (n - 1) * dynamicHGap;
       const sx = -totalW / 2;
       const yRaw = isRev ? orderedLayers.length - 1 - li : li;
-      const y = yRaw * (NODE_H + V_GAP);
+      const y = yRaw * (NODE_H + dynamicVGap);
 
       for (let i = 0; i < n; i++) {
-        pos.set(layer[i], { x: sx + i * (NODE_W + H_GAP) + NODE_W / 2, y, layer: li });
+        pos.set(layer[i], { x: sx + i * (NODE_W + dynamicHGap) + NODE_W / 2, y, layer: li });
       }
     } else {
-      const totalH = n * NODE_H + (n - 1) * V_GAP;
+      const totalH = n * NODE_H + (n - 1) * dynamicVGap;
       const sy = -totalH / 2;
       const xRaw = isRev ? orderedLayers.length - 1 - li : li;
-      const x = xRaw * (NODE_W + H_GAP);
+      const x = xRaw * (NODE_W + dynamicHGap);
 
       for (let i = 0; i < n; i++) {
-        pos.set(layer[i], { x, y: sy + i * (NODE_H + V_GAP) + NODE_H / 2, layer: li });
+        pos.set(layer[i], { x, y: sy + i * (NODE_H + dynamicVGap) + NODE_H / 2, layer: li });
       }
     }
   }
@@ -576,6 +611,10 @@ function computeLayout(
     return busLayout(parsed);
   }
 
+  if (algorithm === "hierarchical") {
+    return layeredLayout(parsed, direction, "perpendicular");
+  }
+
   if (algorithm === "force" || algorithm === "elk-force") {
     return forceLayout(parsed, direction);
   }
@@ -670,7 +709,67 @@ function busLayout(parsed: ParsedMermaidGraph): LayoutResult {
     pos.set(id, { x: side * (NODE_W / 2 + 50), y: i * (NODE_H + 40), layer: i });
   });
 
-  return buildResult(pos, parsed, "TB");
+  return buildResult(pos, parsed, "TB", "perpendicular");
+}
+
+function perpendicularRoutePoints(
+  srcPt: Point,
+  tgtPt: Point,
+  isVert: boolean,
+  lane: number,
+  viewBox?: { w: number; h: number }
+): Point[] {
+  const TARGET_RATIO = 16 / 9;
+  const laneOffset = lane * 14;
+  const breakout = 30;
+
+  // Calculate if we need to "push" edges out to satisfy 16:9
+  let pushX = 0;
+  let pushY = 0;
+
+  if (viewBox) {
+    const currentRatio = viewBox.w / viewBox.h;
+    if (currentRatio < TARGET_RATIO) {
+      // Too portrait, push edges horizontally
+      pushX = (viewBox.h * TARGET_RATIO - viewBox.w) * 0.2 * (lane >= 0 ? 1 : -1);
+    } else if (currentRatio > TARGET_RATIO) {
+      // Too panorama, push edges vertically
+      pushY = (viewBox.w / TARGET_RATIO - viewBox.h) * 0.2 * (lane >= 0 ? 1 : -1);
+    }
+  }
+
+  if (isVert) {
+    const midY = (srcPt.y + tgtPt.y) / 2 + laneOffset + pushY;
+    const b1 = { x: srcPt.x, y: srcPt.y + (tgtPt.y > srcPt.y ? breakout : -breakout) };
+    const b2 = { x: tgtPt.x, y: tgtPt.y + (srcPt.y > tgtPt.y ? breakout : -breakout) };
+
+    // We add more points to ensure it looks "game-like" and avoids the nodes' immediate area
+    return dedupePoints([
+      srcPt,
+      b1,
+      { x: b1.x + pushX, y: b1.y },
+      { x: b1.x + pushX, y: midY },
+      { x: b2.x + pushX, y: midY },
+      { x: b2.x + pushX, y: b2.y },
+      b2,
+      tgtPt
+    ]);
+  } else {
+    const midX = (srcPt.x + tgtPt.x) / 2 + laneOffset + pushX;
+    const b1 = { x: srcPt.x + (tgtPt.x > srcPt.x ? breakout : -breakout), y: srcPt.y };
+    const b2 = { x: tgtPt.x + (srcPt.x > tgtPt.x ? breakout : -breakout), y: tgtPt.y };
+
+    return dedupePoints([
+      srcPt,
+      b1,
+      { x: b1.x, y: b1.y + pushY },
+      { x: midX, y: b1.y + pushY },
+      { x: midX, y: b2.y + pushY },
+      { x: b2.x, y: b2.y + pushY },
+      b2,
+      tgtPt
+    ]);
+  }
 }
 
 function orthogonalRoutePoints(srcPt: Point, tgtPt: Point, isVert: boolean, lane: number): Point[] {
@@ -861,7 +960,9 @@ function buildResult(
     }
 
     let points: Point[];
-    if (routeStyle === "orthogonal") {
+    if (routeStyle === "perpendicular") {
+      points = perpendicularRoutePoints(srcPt, tgtPt, isVert, lane, { w: vbW, h: vbH });
+    } else if (routeStyle === "orthogonal") {
       points = orthogonalRoutePoints(srcPt, tgtPt, isVert, lane);
     } else if (routeStyle === "concentric") {
       points = concentricRoutePoints(
