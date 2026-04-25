@@ -11,6 +11,7 @@ import { lint } from "@/lib/linter";
 import { ZoomIn, ZoomOut, Maximize2, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Minimap from "./Minimap";
+import HUD from "./HUD";
 
 // ── DOT WASM: lazily-loaded Graphviz instance ────────────────────────────────
 type GraphvizModule = typeof import("@hpcc-js/wasm");
@@ -357,6 +358,9 @@ export default function GraphCanvas() {
             <span className="text-xs text-cyan-400 font-mono">Rendering…</span>
           </div>
         )}
+
+        {/* HUD Overlay */}
+        <HUD />
       </div>
 
       {/* Zoom controls */}
